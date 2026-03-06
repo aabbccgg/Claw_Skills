@@ -48,7 +48,7 @@ Extract: `5h_util`, `7d_util` (float 0.0–1.0), `5h_reset`, `7d_reset` (epoch).
 
 Always report:
 ```
-📊 Claude 用量: 5h: X% (reset: T1) | 7d: Y% (reset: T2) | Status: ✅/⚠️/🛑
+📊 Claude Usage: 5h: X% (reset: T1) | 7d: Y% (reset: T2) | Status: ✅/⚠️/🛑
 ```
 Below thresholds + standalone check → report and done.
 
@@ -84,9 +84,9 @@ Each wake = **fresh isolated session** — message MUST be self-contained (inclu
 
 **3. Notify** via `message(action="send")`:
 ```
-⚠️ Claude 配额接近上限 (5h: X% / 7d: Y%)
-已自动暂停，预计恢复: {safe_resume_at}
-回复 continue 可强制恢复（可能失败）
+⚠️ Claude quota near limit (5h: X% / 7d: Y%)
+Auto-suspended, expected resume at: {safe_resume_at}
+Reply 'continue' to force resume
 ```
 
 **4. End turn.** Do not proceed with heavy tasks.
@@ -95,8 +95,8 @@ Each wake = **fresh isolated session** — message MUST be self-contained (inclu
 
 1. Read STATE.md — `status=complete` → `NO_REPLY`
 2. Re-check quota via curl
-3. Below thresholds → set `status=complete`, report `✅ 配额已恢复`
-4. Still over → update STATE.md, schedule new cron wake, report `⏳ 仍未恢复，已重新调度`
+3. Below thresholds → set `status=complete`, report `✅ Quota restored`
+4. Still over → update STATE.md, schedule new cron wake, report `⏳ Still exceeding quota, rescheduled`
 
 ## Manual Resume
 
