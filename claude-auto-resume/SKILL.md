@@ -4,7 +4,7 @@ description: >
   Monitor Claude API usage to prevent rate limit failures. Trigger periodically or before heavy tasks.
   Triggers: "claude用量检测", "claude用量监控", "检测claude用量", "查询claude剩余token",
   "claude配额满自动恢复", "claude防超额", "check claude quota", "claude rate limit".
-  Auto-suspends if 5h quota ≥95% or 7d quota ≥98%, schedules cron wake for auto-resume after reset.
+  Auto-suspends if 5h quota ≥90% or 7d quota ≥95%, schedules cron wake for auto-resume after reset.
 metadata:
   {
     "openclaw":
@@ -25,8 +25,8 @@ STATE.md = single source of truth.
 
 | Window | Suspend | Header |
 |--------|---------|--------|
-| 5h | ≥ 95% | `anthropic-ratelimit-unified-5h-utilization` |
-| 7d | ≥ 98% | `anthropic-ratelimit-unified-7d-utilization` |
+| 5h | ≥ 90% | `anthropic-ratelimit-unified-5h-utilization` |
+| 7d | ≥ 95% | `anthropic-ratelimit-unified-7d-utilization` |
 
 Reset timestamps: `anthropic-ratelimit-unified-5h-reset` / `7d-reset` (epoch seconds).
 
@@ -61,7 +61,7 @@ Below thresholds + standalone check → report and done.
 
 ## Suspend Flow
 
-Trigger: `5h_util >= 0.95` OR `7d_util >= 0.98`.
+Trigger: `5h_util >= 0.90` OR `7d_util >= 0.95`.
 
 **1. Save** `<agent_workspace>/claude-quota/STATE.md`:
 ```markdown
