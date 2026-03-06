@@ -53,11 +53,14 @@ Compute `at` dynamically: `date -u -d '+Ns' '+%Y-%m-%dT%H:%M:%SZ'` (N = delay se
 
 ### Cron template (all agents)
 
-Read own agentId from runtime info agent list (e.g. `main`, `my-agent`), pass it explicitly:
+⚠️ Use the `cron` tool directly. Do NOT use `exec` / CLI (`openclaw cron add ...`) — CLI calls can be aborted mid-execution, breaking the loop.
+
+Read own agentId from runtime info (e.g. `main`, `general`), pass as `agentId` on the job:
 
 ```
-cron(action="add", schedule={kind:"at"},
-  payload={kind:"agentTurn", agent:"<own_agentId>", message:"[auto-iterate:<id>] Wake: check round N\n\nState: <path>\nSubagent: <key>\nWorkdir: <path>\nTarget: <criteria>\nRound: N\nReport to: {channel, target, threadId}\n\nSteps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress 4.If !done: next step+subagent+STATE+cron 5.If done: set complete+final report"},
+cron(action="add", schedule={kind:"at", at:"<UTC timestamp>"},
+  agentId="<own_agentId>",
+  payload={kind:"agentTurn", message:"[auto-iterate:<id>] Wake: check round N\n\nState: <path>\nSubagent: <key>\nWorkdir: <path>\nTarget: <criteria>\nRound: N\nReport to: {channel, target, threadId}\n\nSteps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress 4.If !done: next step+subagent+STATE+cron 5.If done: set complete+final report"},
   sessionTarget="isolated")
 ```
 Each cron wake = **fresh isolated session** — agentTurn message MUST be self-contained.
