@@ -1,39 +1,145 @@
 ---
 name: claude-auto-resume
-description: Monitor Claude usage to prevent rate limit failures. Trigger this skill periodically or before heavy tasks, or when asked "claude用量检测", "claude用量监控", "检测claude用量", "查询claude剩余token", "claude配额满自动恢复", "claude防超额" etc. Automatically suspends execution if 5h quota is >=95% or 7d quota is >=98% utilized, waiting for reset (Pro/Web accounts) or user recharge (API Tokens).
+description: >
+  Monitor Claude API usage to prevent rate limit failures. Trigger periodically or before heavy tasks.
+  Triggers: "claude用量检测", "claude用量监控", "检测claude用量", "查询claude剩余token",
+  "claude配额满自动恢复", "claude防超额", "check claude quota", "claude rate limit".
+  Auto-suspends if 5h quota ≥95% or 7d quota ≥98%, schedules cron wake for auto-resume after reset.
 ---
 
-# Claude Auto-Resume & Rate Limit Management
+# Claude Auto-Resume
 
-This skill instructs the agent on how to manage Claude's usage limits dynamically, ensuring long-running tasks do not fail abruptly due to rate limits or insufficient balance. 
+**Goal**: Prevent hard crashes from rate limits. Monitor → warn → suspend → auto-resume.
 
-Depending on the credential type being used, the agent MUST follow these specific quota-handling rules whenever usage is checked or a rate limit is approaching:
+State dir: `~/.openclaw/workspace/claude-quota/`.
+STATE.md = single source of truth for suspended tasks.
 
-**Monitoring Strategy**:
-Send a minimal-cost request to check real-time rate limit headers:
+## Thresholds
+
+| Window | Suspend | Header |
+|--------|---------|--------|
+| 5h | ≥ 95% | `anthropic-ratelimit-unified-5h-utilization` |
+| 7d | ≥ 98% | `anthropic-ratelimit-unified-7d-utilization` |
+
+Reset timestamps from: `anthropic-ratelimit-unified-5h-reset` / `anthropic-ratelimit-unified-7d-reset`.
+
+## API Key Discovery
+
+Try in order — use the first that works:
+1. `exec`: `echo $ANTHROPIC_API_KEY`
+2. `gateway(action="config.get")` → look for anthropic key in provider config
+3. Ask user
+
+## Check Quota
+
 ```bash
-# You MUST replace <PROVIDER_URL> with the actual API base URL (Default: https://api.anthropic.com)
-# You MUST replace <MODEL_NAME> with the specific Claude model being used.
-curl -s -i "<PROVIDER_URL>/v1/messages" \
-  -H "x-api-key: $YOUR_API_TOKEN" \
+curl -s -i "https://api.anthropic.com/v1/messages" \
+  -H "x-api-key: $ANTHROPIC_API_KEY" \
   -H "anthropic-version: 2023-06-01" \
   -H "content-type: application/json" \
-  -d '{"model": "<MODEL_NAME>", "max_tokens": 1, "messages": [{"role": "user", "content": "Ping"}]}'
+  -d '{"model": "claude-sonnet-4-20250514", "max_tokens": 1, "messages": [{"role": "user", "content": "ping"}]}'
 ```
 
-Parse the following `unified` HTTP headers:
-- `anthropic-ratelimit-unified-5h-utilization` (value like `0.95` means 95%)
-- `anthropic-ratelimit-unified-7d-utilization` (value like `0.98` means 98%)
-- `anthropic-ratelimit-unified-5h-reset` (timestamp of when the 5h limit resets)
-- `anthropic-ratelimit-unified-7d-reset` (timestamp of when the 7d limit resets)
+Use cheapest model available for the ping. Parse response headers via `grep -i "anthropic-ratelimit-unified"`.
 
-**Action Rule: Default Suspend, Auto-Resume via Cron Wake, and Allow Manual Resume**
-If the 5h utilization percentage reaches **95%**, or the 7d utilization percentage reaches **98%**:
-1. Immediately **pause the current task** and save your current task state to a `STATE.md` working file so it can be resumed later.
-2. Extract the exact **Reset time** corresponding to the exhausted limit (`anthropic-ratelimit-unified-*-reset` timestamp in UNIX epoch seconds). **Then add a safety margin of 60 to 120 seconds** (1-2 minutes) to this timestamp to ensure the quota has fully refreshed before waking up. Let's call this `Safe_Reset_Time`.
-3. Configure a system cron wake to schedule an automatic resumption exactly at this buffered time. You MUST explicitly use the `run_command` tool to add a cron job via the `openclaw` CLI or the appropriate internal scheduling command (e.g., `openclaw cron add --time "<Safe_Reset_Time>" --message "Quota refreshed. Resume task: claude-auto-resume"`). This ensures the task recovers without user intervention once quotas are safely refreshed.
-4. Send a notification to the user stating: "⚠️ API rate limit reached a critical threshold (5h >= 95% or 7d >= 98%). The task is automatically suspended until the quota resets. You can explicitly reply with **'continue'** to bypass this and force-resume the task immediately."
-5. Enter a blocked state (using `notify_user` with `BlockedOnUser: true`) securely waiting. The agent will either be woken up automatically by the Cron trigger at `<Safe_Reset_Time>`, or manually by the user typing "continue".
+### Parse Result
 
----
-**CRITICAL**: The fundamental purpose of this skill is to ensure continuous execution without hard crashes. Never abandon a task simply because a limit was reached—always fallback to explicit cron-waking or user prompting as defined above.
+Extract these four values:
+- `5h_util` — float (0.0–1.0)
+- `7d_util` — float (0.0–1.0)
+- `5h_reset` — ISO timestamp or epoch
+- `7d_reset` — ISO timestamp or epoch
+
+## Report (always)
+
+After parsing, report current status to user:
+
+```
+📊 Claude 用量:
+• 5h: {5h_util*100}% (reset: {5h_reset})
+• 7d: {7d_util*100}% (reset: {7d_reset})
+• Status: ✅ OK / ⚠️ Approaching limit / 🛑 Suspended
+```
+
+If called as standalone check (no running task) and below thresholds → report and done.
+
+## Suspend Flow
+
+If `5h_util >= 0.95` OR `7d_util >= 0.98`:
+
+### 1. Save State
+
+Create `~/.openclaw/workspace/claude-quota/STATE.md`:
+```markdown
+# Claude Quota Suspend State
+- **status**: suspended
+- **suspended_at**: <ISO timestamp>
+- **reason**: 5h={5h_util} / 7d={7d_util}
+- **reset_at**: <whichever reset is sooner>
+- **safe_resume_at**: <reset_at + 90s>
+- **task_context**: <what was being done, if any>
+- **report_to**: {channel: "<channel>", target: "<chat_id>", threadId: "<topic_id>"}
+```
+
+### 2. Schedule Cron Wake
+
+⚠️ Use the `cron` tool directly. Do NOT use `exec` / CLI.
+
+Compute safe resume time: `reset_at + 90 seconds` (safety margin).
+
+```
+cron(action="add", job={
+  schedule: {kind: "at", at: "<safe_resume_at UTC ISO>"},
+  agentId: "<own_agentId>",
+  payload: {kind: "agentTurn", message: "[claude-auto-resume] Wake: quota reset check\n\nState: ~/.openclaw/workspace/claude-quota/STATE.md\nReport to: {channel, target, threadId}\n\nSteps:\n1. Read STATE.md (if status=complete → NO_REPLY)\n2. Re-run quota check (curl)\n3. If below thresholds → set status=complete, report ✅ to user\n4. If still over → update STATE.md, schedule new cron wake with next reset+90s\n5. Never abandon — always reschedule or complete"},
+  sessionTarget: "isolated"
+})
+```
+
+Each cron wake = **fresh isolated session** — message MUST be self-contained.
+
+### 3. Notify User
+
+Use `message(action="send")` for notification:
+
+```
+⚠️ Claude 配额接近上限:
+• 5h: {5h_util*100}% / 7d: {7d_util*100}%
+• 已自动暂停任务，等待配额重置
+• 预计恢复时间: {safe_resume_at}
+• 回复 **continue** 可强制恢复（可能导致请求失败）
+```
+
+### 4. Stop current execution
+
+Do not proceed with any heavy task. End turn.
+
+## Resume Flow (cron wake)
+
+On cron wake:
+1. Read STATE.md — if `status=complete` → `NO_REPLY`
+2. Re-check quota via curl
+3. **Below thresholds**: set `status=complete` in STATE.md → report to user: `✅ Claude 配额已恢复，可以继续工作`
+4. **Still over**: update STATE.md with new reset times → schedule another cron wake → report: `⏳ 配额仍未恢复，已重新调度，预计 {new_safe_resume_at}`
+
+## Manual Resume
+
+If user says "continue" / "强制恢复" / "force resume" while suspended:
+1. Set STATE.md `status=complete`
+2. Remove pending cron job if possible
+3. Warn user: rate limit errors may occur
+4. Proceed with task
+
+## Integration with Other Skills
+
+When used alongside `auto-iterate` or long-running tasks:
+- Check quota **before** spawning expensive subagent rounds
+- If approaching limits, suspend the outer loop too (save its state)
+- On resume, restore outer loop state and continue
+
+## Edge Cases
+
+- **No API key found**: Report to user, do not block — they may be using a different provider/proxy
+- **Curl fails**: Retry once after 5s. If still fails, warn user and continue (non-blocking)
+- **Multiple suspends**: Only one STATE.md — latest suspend overwrites. Cron wakes check fresh state
+- **Already complete on wake**: Stale wake → `NO_REPLY`, do nothing
