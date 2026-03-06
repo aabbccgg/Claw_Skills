@@ -5,6 +5,13 @@ description: >
   Triggers: "claude用量检测", "claude用量监控", "检测claude用量", "查询claude剩余token",
   "claude配额满自动恢复", "claude防超额", "check claude quota", "claude rate limit".
   Auto-suspends if 5h quota ≥95% or 7d quota ≥98%, schedules cron wake for auto-resume after reset.
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "📊",
+      },
+  }
 ---
 
 # Claude Auto-Resume

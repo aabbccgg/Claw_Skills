@@ -3,6 +3,13 @@ name: auto-iterate
 description: >
   REQUIRED for multi-iteration tasks. Loops a workflow until criteria met.
   Triggers: "自动迭代", "迭代", "循环执行", "重复直到", "iterate until done", "loop until".
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "🔄",
+      },
+  }
 ---
 
 # Auto-Iterate
