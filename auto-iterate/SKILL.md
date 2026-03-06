@@ -85,6 +85,10 @@ Each cron wake = **fresh isolated session** — agentTurn message MUST be self-c
 Trivial 5s, simple 15s, moderate 45s, complex 90s.
 Decay on pending: R1=100% R2=75% R3+=50% of initial (min 5s); >20 retries → pause.
 
+## Subagent Timeout
+
+Always set `runTimeoutSeconds: 3600` (60 min) on spawned subagents. Prevents infinite cron polling if subagent hangs.
+
 ## Edge Cases
 
 Dead loop: 3+ rounds with issues but 0 fixed, or no issues but criteria unmet → pause.
