@@ -82,12 +82,12 @@ Trigger: `5h_util >= 0.90` OR `7d_util >= 0.95`.
 cron(action="add", job={
   schedule: {kind:"at", at:"<safe_resume_at UTC ISO>"},
   agentId: "<own_agentId>",
-  payload: {kind:"agentTurn", timeoutSeconds:180, message:"[claude-auto-resume] Wake: quota reset check\n\nState: <absolute_path>/STATE.md\nReport to: {channel, target, threadId}\n\nSteps: 1.Read STATE(complete→NO_REPLY) 2.Curl quota check 3.Below→complete+report✅ 4.Still over→new cron+report⏳ 5.Never abandon\n\nAPI key path: <path to auth-profiles.json or config>"},
+  payload: {kind:"agentTurn", timeoutSeconds:180, message:"[claude-auto-resume] Wake: quota reset check\n\nState: <absolute_path>/STATE.md\nReport to: {channel, target, threadId}\n\n⚠️ TOOL RULES: Call `cron(action=\"add\",...)` function — NOT `exec(\"openclaw cron ...\")`. Report via `message(action=\"send\")`. Set delivery={mode:\"none\"}.\n\nSteps: 1.Read STATE(complete→NO_REPLY) 2.Curl quota check 3.Below→complete+report✅ 4.Still over→new cron+report⏳ 5.Never abandon\n\nAPI key path: <path to auth-profiles.json or config>"},
   delivery: {mode:"none"},
   sessionTarget: "isolated"
 })
 ```
-Each wake = **fresh isolated session** — message MUST be self-contained (include state path, API key path, report target, full steps).
+Each wake = **fresh isolated session** — message MUST be self-contained (include state path, API key path, report target, full steps). Always set `delivery: {mode:"none"}` — announce/last will leak duplicate messages.
 
 **3. Notify** via `message(action="send")`:
 ```
