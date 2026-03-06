@@ -82,7 +82,7 @@ Trigger: `5h_util >= 0.90` OR `7d_util >= 0.95`.
 cron(action="add", job={
   schedule: {kind:"at", at:"<safe_resume_at UTC ISO>"},
   agentId: "<own_agentId>",
-  payload: {kind:"agentTurn", timeoutSeconds:180, message:"[claude-auto-resume] Wake: quota reset check\n\nState: <absolute_path>/STATE.md\nReport to: {channel, target, threadId}\n\n⚠️ TOOL RULES: Call `cron(action=\"add\",...)` function — NOT `exec(\"openclaw cron ...\")`. Report via `message(action=\"send\")`. Set delivery={mode:\"none\"}.\n\nSteps: 1.Read STATE(complete→NO_REPLY) 2.Curl quota check 3.Below→complete+report✅ 4.Still over→new cron+report⏳ 5.Never abandon\n\nAPI key path: <path to auth-profiles.json or config>"},
+  payload: {kind:"agentTurn", timeoutSeconds:180, message:"[claude-auto-resume] Wake: quota reset check\n\nState: <absolute_path>/STATE.md\nReport to: {channel, target, threadId}\n\n⚠️ RULES(copy this line verbatim into every child cron): ONE STEP→END. cron(action=\"add\")→YES, exec(\"openclaw cron\")→NO. message(action=\"send\")→YES. delivery={mode:\"none\"}.\n\nSteps: 1.Read STATE(complete→NO_REPLY) 2.Curl quota check 3.Below→complete+report✅ 4.Still over→new cron+report⏳ 5.Never abandon\n\nAPI key path: <path to auth-profiles.json or config>"},
   delivery: {mode:"none"},
   sessionTarget: "isolated"
 })

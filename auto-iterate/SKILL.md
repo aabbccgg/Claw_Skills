@@ -83,12 +83,11 @@ Target: <criteria>
 Round: N
 Report to: {channel, target, threadId}
 
-⚠️ ONE STEP ONLY. Check current subagent → report → if done: spawn next subagent + schedule cron wake → END TURN. Do NOT poll/wait for subagent completion. Do NOT proceed to subsequent steps in the same session.
-⚠️ TOOL RULES: Call `cron(action="add",...)` function — NOT `exec("openclaw cron ...")`. Report via `message(action="send")`. Set delivery={mode:"none"}.
+⚠️ RULES(copy this line verbatim into every child cron): ONE STEP→END. cron(action="add")→YES, exec("openclaw cron")→NO. message(action="send")→YES. delivery={mode:"none"}.
 
 Steps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress via message(action=send) 4.If !done: schedule next cron wake → END TURN 5.If done: spawn next subagent+STATE+cron → END TURN 6.If all complete: set complete+final report
 ```
-Each cron wake = **fresh isolated session** — agentTurn message MUST be self-contained. Include BOTH ⚠️ constraints (ONE STEP ONLY + TOOL RULES) verbatim in every cron message.
+Each cron wake = **fresh isolated session** — agentTurn message MUST be self-contained.
 
 ### Delay
 
