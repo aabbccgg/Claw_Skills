@@ -26,32 +26,22 @@ P0 blocks round (retry once; fails → pause). P2: fix or skip.
 
 ## Reporting
 
-Always use `message(action="send")` for progress and completion — do NOT rely on session response delivery (cron wake responses may not reach the user's chat).
-
-**Default agent**: `message(action="send", target="<chat_id>", message="⚡ Round 3/7 — <status>")` each round.
-
-**Non-default agents**: same, with explicit channel routing. Store `report_to` in STATE.md at init:
+Always use `message(action="send")` for progress and completion — cron isolated sessions have no chat delivery.
+Store `report_to` in STATE.md at init:
 ```
 - **report_to**: {channel: "telegram", target: "<chat_id>", threadId: "<topic_id>"}
 ```
+Report each round: `message(action="send", target="<chat_id>", message="⚡ Round 3/7 — <status>")`.
 **Only the session that sets status=complete sends the final report.** Already complete → NO_REPLY.
 
 ## Cron Wake
 
 ⚠️ Subagent auto-announce does NOT trigger an agent turn. Only cron self-wake drives loop continuation.
-
-### Determine cron mode FIRST
-
-Check agentId from runtime info:
-- **main** → `sessionTarget="main"` + `payload.kind="systemEvent"`
-- **≠ main** → `sessionTarget="isolated"` + `payload.kind="agentTurn"` + `--agent <own_agentId>`
-
-⚠️ Non-default agents MUST use `sessionTarget="isolated"` (not `"main"` — will error) and pass `--agent` explicitly (omitting routes to main agent).
+Always use `sessionTarget="isolated"` — keeps each wake stateless and avoids polluting any persistent session.
 
 ### One round per cron wake
 
 One round per wake: check subagent → report → next step → spawn subagent → cron → END TURN.
-Ignore auto-announce events in-session — next cron wake handles them.
 
 ### Stale wake detection
 
@@ -61,16 +51,13 @@ On wake: read STATE.md FIRST. If `status=complete` → `NO_REPLY`, do nothing.
 
 Compute `at` dynamically: `date -u -d '+Ns' '+%Y-%m-%dT%H:%M:%SZ'` (N = delay seconds). Never hardcode.
 
-### Default agent (main)
+### Cron template (all agents)
 
-Spawn → STATE.md `status=awaiting-review` → cron(`systemEvent`, `sessionTarget="main"`) → end turn.
-On wake: `sessions_history` → done: continue → pending: reschedule.
-
-### Non-default agents
+Read own agentId from runtime info agent list (e.g. `main`, `my-agent`), pass it explicitly:
 
 ```
 cron(action="add", schedule={kind:"at"},
-  payload={kind:"agentTurn", message:"[auto-iterate:<id>] Wake: check round N\n\nState: <path>\nSubagent: <key>\nWorkdir: <path>\nTarget: <criteria>\nRound: N\nReport to: {channel, target, threadId}\n\nSteps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress 4.If !done: next step+subagent+STATE+cron 5.If done: set complete+final report"},
+  payload={kind:"agentTurn", agent:"<own_agentId>", message:"[auto-iterate:<id>] Wake: check round N\n\nState: <path>\nSubagent: <key>\nWorkdir: <path>\nTarget: <criteria>\nRound: N\nReport to: {channel, target, threadId}\n\nSteps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress 4.If !done: next step+subagent+STATE+cron 5.If done: set complete+final report"},
   sessionTarget="isolated")
 ```
 Each cron wake = **fresh isolated session** — agentTurn message MUST be self-contained.
