@@ -76,9 +76,11 @@ Target: <criteria>
 Round: N
 Report to: {channel, target, threadId}
 
-Steps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress via message(action=send) 4.If !done: next step+subagent+STATE+cron 5.If done: set complete+final report
+⚠️ ONE STEP ONLY. Check current subagent → report → if done: spawn next subagent + schedule cron wake → END TURN. Do NOT poll/wait for subagent completion. Do NOT proceed to subsequent steps in the same session.
+
+Steps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress via message(action=send) 4.If !done: schedule next cron wake → END TURN 5.If done: spawn next subagent+STATE+cron → END TURN 6.If all complete: set complete+final report
 ```
-Each cron wake = **fresh isolated session** — agentTurn message MUST be self-contained.
+Each cron wake = **fresh isolated session** — agentTurn message MUST be self-contained. Include the ⚠️ ONE STEP ONLY constraint verbatim in every cron message.
 
 ### Delay
 
