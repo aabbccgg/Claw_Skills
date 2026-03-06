@@ -34,11 +34,12 @@ P0 blocks round (retry once; fails → pause). P2: fix or skip.
 ## Reporting
 
 Always use `message(action="send")` for progress and completion — cron isolated sessions have no chat delivery.
-Store `report_to` in STATE.md at init:
+Store `report_to` in STATE.md at init (detect from inbound context):
 ```
-- **report_to**: {channel: "telegram", target: "<chat_id>", threadId: "<topic_id>"}
+- **report_to**: {channel: "telegram", target: "<user_id>"}                        # DM
+- **report_to**: {channel: "telegram", target: "<group_id>", threadId: "<topic_id>"} # group topic
 ```
-Report each round: `message(action="send", target="<chat_id>", message="⚡ Round 3/7 — <status>")`.
+Report each round: `message(action="send", channel="<channel>", target="<target>", [threadId="<topic>",] message="⚡ Round 3/7 — <status>")`. Only include `threadId` for group topics.
 **Only the session that sets status=complete sends the final report.** Already complete → NO_REPLY.
 
 ## Cron Wake
