@@ -75,7 +75,8 @@ Trigger: `5h_util >= 0.95` OR `7d_util >= 0.98`.
 cron(action="add", job={
   schedule: {kind:"at", at:"<safe_resume_at UTC ISO>"},
   agentId: "<own_agentId>",
-  payload: {kind:"agentTurn", message:"[claude-auto-resume] Wake: quota reset check\n\nState: <absolute_path>/STATE.md\nReport to: {channel, target, threadId}\n\nSteps: 1.Read STATE(complete→NO_REPLY) 2.Curl quota check 3.Below→complete+report✅ 4.Still over→new cron+report⏳ 5.Never abandon\n\nAPI key path: <path to auth-profiles.json or config>"},
+  payload: {kind:"agentTurn", timeoutSeconds:180, message:"[claude-auto-resume] Wake: quota reset check\n\nState: <absolute_path>/STATE.md\nReport to: {channel, target, threadId}\n\nSteps: 1.Read STATE(complete→NO_REPLY) 2.Curl quota check 3.Below→complete+report✅ 4.Still over→new cron+report⏳ 5.Never abandon\n\nAPI key path: <path to auth-profiles.json or config>"},
+  delivery: {mode:"none"},
   sessionTarget: "isolated"
 })
 ```
