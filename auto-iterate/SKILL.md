@@ -36,13 +36,14 @@ Multiple sequential iterations → number as tasks in STATE.md:
 - **current_task**: 1
 ```
 
-Single iteration (no tasks field) = existing behavior unchanged. See **Complete** in Loop for transition logic.
+The loop continues across all tasks — completing one task automatically advances to the next. `status=complete` is only set when the last task finishes.
+Single iteration (no tasks field) = existing behavior unchanged.
 
 ## Loop
 
 **Init**: create task dir + STATE.md + heartbeat entry (`[auto-iterate:<id>]`) + report start.
 **Round**: execute step → spawn subagent review → cron self-wake → on wake: check result → **report progress** → complete or increment+loop.
-**Complete**: task done → more tasks? advance current_task + reset round + report task completion + continue → last task? set status=complete + remove heartbeat/cron + **report final result**.
+**Complete**: task criteria met → multi-task with more tasks? advance current_task + reset round + report task completion + continue → otherwise: set status=complete + remove heartbeat/cron + **report final result**.
 
 ## Reporting
 
