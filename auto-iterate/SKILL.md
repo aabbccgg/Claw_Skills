@@ -25,11 +25,25 @@ P0 blocks round (retry once; fails → pause). P2: fix or skip.
 2. Inline review by default. Subagent only when isolation/model/user requires it.
 3. Validate: ≥1 step + ≥1 criterion. Ask if missing.
 
+## Multi-Task
+
+Multiple sequential iterations → number as tasks in STATE.md:
+
+```
+- **tasks**:
+  1. [dev-cycle] dev→test→fix→security→fix per roadmap | ⬜
+  2. [full-qa] full project test→fix→security→fix | ⬜
+- **current_task**: 1
+```
+
+Task transition: current task criteria met → mark ✅ → more tasks? advance current_task, reset round=1, report task completion, continue loop → last task? set status=complete, send final report.
+Single iteration (no tasks field) = existing behavior unchanged.
+
 ## Loop
 
 **Init**: create task dir + STATE.md + heartbeat entry (`[auto-iterate:<id>]`) + report start.
 **Round**: execute step → spawn subagent review → cron self-wake → on wake: check result → **report progress** → complete or increment+loop.
-**Complete**: set STATE.md status=complete + remove heartbeat/cron + **report final result**.
+**Complete**: task done → more tasks? advance current_task + reset round + report task completion + continue → last task? set status=complete + remove heartbeat/cron + **report final result**.
 
 ## Reporting
 
@@ -86,7 +100,7 @@ Report to: {channel, target, threadId}
 
 ⚠️ RULES(copy this line verbatim into every child cron): ONE STEP→END. cron(action="add")→YES, exec("openclaw cron")→NO. message(action="send")→YES. delivery={mode:"none"}.
 
-Steps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress via message(action=send) 4.If !done: schedule next cron wake → END TURN 5.If done: spawn next subagent+STATE+cron → END TURN 6.If all complete: set complete+final report
+Steps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress via message(action=send) 4.If !done: schedule next cron wake → END TURN 5.If done: spawn next subagent+STATE+cron → END TURN 6.If task done+more tasks: advance task+reset round+report+continue 7.If all tasks done: set complete+final report
 ```
 Each cron wake = **fresh isolated session** — agentTurn message MUST be self-contained.
 
