@@ -9,11 +9,10 @@ description: >
 
 # Claude Auto-Resume
 
-**Goal**: Prevent hard crashes from rate limits. Monitor → warn → suspend → auto-resume.
+Monitor → warn → suspend → cron auto-resume. Never crash, never abandon.
 
-State dir: `<agent_workspace>/claude-quota/` (use YOUR agent's workspace, not main's).
-Resolve via runtime info or `agents.list` in config — e.g. agent:tester → `~/.openclaw/workspace-tester/claude-quota/`.
-STATE.md = single source of truth for suspended tasks.
+State dir: `<agent_workspace>/claude-quota/` — use YOUR workspace (e.g. `workspace-tester/`), **not** main's.
+STATE.md = single source of truth.
 
 ## Thresholds
 
@@ -22,145 +21,93 @@ STATE.md = single source of truth for suspended tasks.
 | 5h | ≥ 95% | `anthropic-ratelimit-unified-5h-utilization` |
 | 7d | ≥ 98% | `anthropic-ratelimit-unified-7d-utilization` |
 
-Reset timestamps from: `anthropic-ratelimit-unified-5h-reset` / `anthropic-ratelimit-unified-7d-reset`.
+Reset timestamps: `anthropic-ratelimit-unified-5h-reset` / `7d-reset` (epoch seconds).
 
 ## API Key Discovery
 
-Try in order — use the first that works:
-1. `exec`: `echo $ANTHROPIC_API_KEY`
-2. Read from OpenClaw raw config file on disk:
-   ```bash
-   # gateway(config.get) redacts secrets — read the raw file instead
-   # Config path: ~/.openclaw/openclaw.json (or openclaw config file)
-   # Look for: models.providers.anthropic.apiKey or auth.profiles with provider=anthropic
-   python3 -c "
-   with open('/home/$USER/.openclaw/openclaw.json') as f:
-       raw = f.read()
-   for line in raw.split('\n'):
-       if 'sk-ant' in line or ('apiKey' in line and 'anthrop' in raw[max(0,raw.index(line)-200):raw.index(line)].lower()):
-           print(line.strip())
-   " 2>/dev/null
-   ```
-3. Read from OpenClaw per-agent auth profiles:
-   ```bash
-   # Pattern: ~/.openclaw/agents/<agentId>/agent/auth-profiles.json
-   # Extract: .profiles["anthropic:*"].token
-   python3 -c "import json,glob; f=glob.glob('/home/$USER/.openclaw/agents/*/agent/auth-profiles.json'); [print(v['token']) for p in f for k,v in json.load(open(p)).get('profiles',{}).items() if 'anthropic' in k and v.get('token')]" | head -1
-   ```
+Try in order:
+1. Env: `echo $ANTHROPIC_API_KEY`
+2. OpenClaw config raw file (`~/.openclaw/openclaw.json`) — grep for `sk-ant` or `apiKey` near anthropic sections
+3. Per-agent auth profiles: `~/.openclaw/agents/<agentId>/agent/auth-profiles.json` → `.profiles["anthropic:*"].token`
 4. Ask user
 
-⚠️ `gateway(action="config.get")` will redact all secrets — do NOT rely on it for key extraction.
+⚠️ `gateway(action="config.get")` **redacts all secrets** (shows `__OPENCLAW_REDACTED__`). Must read raw files on disk instead.
 
 ## Check Quota
 
 ```bash
+API_KEY=<discovered_key>
 curl -s -i "https://api.anthropic.com/v1/messages" \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
+  -H "x-api-key: $API_KEY" \
   -H "anthropic-version: 2023-06-01" \
   -H "content-type: application/json" \
-  -d '{"model": "claude-sonnet-4-20250514", "max_tokens": 1, "messages": [{"role": "user", "content": "ping"}]}'
+  -d '{"model":"claude-sonnet-4-20250514","max_tokens":1,"messages":[{"role":"user","content":"ping"}]}'
 ```
+Use cheapest model. Parse: `grep -i "anthropic-ratelimit-unified"`.
+Extract: `5h_util`, `7d_util` (float 0.0–1.0), `5h_reset`, `7d_reset` (epoch).
 
-Use cheapest model available for the ping. Parse response headers via `grep -i "anthropic-ratelimit-unified"`.
-
-### Parse Result
-
-Extract these four values:
-- `5h_util` — float (0.0–1.0)
-- `7d_util` — float (0.0–1.0)
-- `5h_reset` — ISO timestamp or epoch
-- `7d_reset` — ISO timestamp or epoch
-
-## Report (always)
-
-After parsing, report current status to user:
-
+Always report:
 ```
-📊 Claude 用量:
-• 5h: {5h_util*100}% (reset: {5h_reset})
-• 7d: {7d_util*100}% (reset: {7d_reset})
-• Status: ✅ OK / ⚠️ Approaching limit / 🛑 Suspended
+📊 Claude 用量: 5h: X% (reset: T1) | 7d: Y% (reset: T2) | Status: ✅/⚠️/🛑
 ```
-
-If called as standalone check (no running task) and below thresholds → report and done.
+Below thresholds + standalone check → report and done.
 
 ## Suspend Flow
 
-If `5h_util >= 0.95` OR `7d_util >= 0.98`:
+Trigger: `5h_util >= 0.95` OR `7d_util >= 0.98`.
 
-### 1. Save State
-
-Create `<agent_workspace>/claude-quota/STATE.md`:
+**1. Save** `<agent_workspace>/claude-quota/STATE.md`:
 ```markdown
-# Claude Quota Suspend State
 - **status**: suspended
-- **suspended_at**: <ISO timestamp>
-- **reason**: 5h={5h_util} / 7d={7d_util}
-- **reset_at**: <whichever reset is sooner>
+- **suspended_at**: <ISO>
+- **reason**: 5h={X} / 7d={Y}
+- **reset_at**: <sooner reset>
 - **safe_resume_at**: <reset_at + 90s>
-- **task_context**: <what was being done, if any>
-- **report_to**: {channel: "<channel>", target: "<chat_id>", threadId: "<topic_id>"}
+- **task_context**: <what was running>
+- **report_to**: {channel, target, threadId}
 ```
 
-### 2. Schedule Cron Wake
+**2. Cron wake** at `reset_at + 90s`:
 
-⚠️ Use the `cron` tool directly. Do NOT use `exec` / CLI.
-
-Compute safe resume time: `reset_at + 90 seconds` (safety margin).
+⚠️ Use `cron` tool directly. Do NOT use `exec` / CLI — can abort mid-execution.
 
 ```
 cron(action="add", job={
-  schedule: {kind: "at", at: "<safe_resume_at UTC ISO>"},
+  schedule: {kind:"at", at:"<safe_resume_at UTC ISO>"},
   agentId: "<own_agentId>",
-  payload: {kind: "agentTurn", message: "[claude-auto-resume] Wake: quota reset check\n\nState: ~/.openclaw/workspace/claude-quota/STATE.md\nReport to: {channel, target, threadId}\n\nSteps:\n1. Read STATE.md (if status=complete → NO_REPLY)\n2. Re-run quota check (curl)\n3. If below thresholds → set status=complete, report ✅ to user\n4. If still over → update STATE.md, schedule new cron wake with next reset+90s\n5. Never abandon — always reschedule or complete"},
+  payload: {kind:"agentTurn", message:"[claude-auto-resume] Wake: quota reset check\n\nState: <absolute_path>/STATE.md\nReport to: {channel, target, threadId}\n\nSteps: 1.Read STATE(complete→NO_REPLY) 2.Curl quota check 3.Below→complete+report✅ 4.Still over→new cron+report⏳ 5.Never abandon\n\nAPI key path: <path to auth-profiles.json or config>"},
   sessionTarget: "isolated"
 })
 ```
+Each wake = **fresh isolated session** — message MUST be self-contained (include state path, API key path, report target, full steps).
 
-Each cron wake = **fresh isolated session** — message MUST be self-contained.
-
-### 3. Notify User
-
-Use `message(action="send")` for notification:
-
+**3. Notify** via `message(action="send")`:
 ```
-⚠️ Claude 配额接近上限:
-• 5h: {5h_util*100}% / 7d: {7d_util*100}%
-• 已自动暂停任务，等待配额重置
-• 预计恢复时间: {safe_resume_at}
-• 回复 **continue** 可强制恢复（可能导致请求失败）
+⚠️ Claude 配额接近上限 (5h: X% / 7d: Y%)
+已自动暂停，预计恢复: {safe_resume_at}
+回复 continue 可强制恢复（可能失败）
 ```
 
-### 4. Stop current execution
-
-Do not proceed with any heavy task. End turn.
+**4. End turn.** Do not proceed with heavy tasks.
 
 ## Resume Flow (cron wake)
 
-On cron wake:
-1. Read STATE.md — if `status=complete` → `NO_REPLY`
+1. Read STATE.md — `status=complete` → `NO_REPLY`
 2. Re-check quota via curl
-3. **Below thresholds**: set `status=complete` in STATE.md → report to user: `✅ Claude 配额已恢复，可以继续工作`
-4. **Still over**: update STATE.md with new reset times → schedule another cron wake → report: `⏳ 配额仍未恢复，已重新调度，预计 {new_safe_resume_at}`
+3. Below thresholds → set `status=complete`, report `✅ 配额已恢复`
+4. Still over → update STATE.md, schedule new cron wake, report `⏳ 仍未恢复，已重新调度`
 
 ## Manual Resume
 
-If user says "continue" / "强制恢复" / "force resume" while suspended:
-1. Set STATE.md `status=complete`
-2. Remove pending cron job if possible
-3. Warn user: rate limit errors may occur
-4. Proceed with task
+User says "continue" / "强制恢复": set complete, remove cron, warn rate limit risk, proceed.
 
-## Integration with Other Skills
+## Integration
 
-When used alongside `auto-iterate` or long-running tasks:
-- Check quota **before** spawning expensive subagent rounds
-- If approaching limits, suspend the outer loop too (save its state)
-- On resume, restore outer loop state and continue
+With `auto-iterate` or long tasks: check quota **before** spawning expensive rounds. Over limit → suspend outer loop too.
 
 ## Edge Cases
 
-- **No API key found**: Report to user, do not block — they may be using a different provider/proxy
-- **Curl fails**: Retry once after 5s. If still fails, warn user and continue (non-blocking)
-- **Multiple suspends**: Only one STATE.md — latest suspend overwrites. Cron wakes check fresh state
-- **Already complete on wake**: Stale wake → `NO_REPLY`, do nothing
+- **No key**: report, don't block (might use different provider)
+- **Curl fails**: retry once after 5s, then warn + continue
+- **Multiple suspends**: latest overwrites STATE.md; cron wakes check fresh state
+- **Stale wake**: `status=complete` → `NO_REPLY`

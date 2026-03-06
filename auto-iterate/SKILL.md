@@ -60,8 +60,23 @@ Read own agentId from runtime info (e.g. `main`, `general`), pass as `agentId` o
 ```
 cron(action="add", schedule={kind:"at", at:"<UTC timestamp>"},
   agentId="<own_agentId>",
-  payload={kind:"agentTurn", message:"[auto-iterate:<id>] Wake: check round N\n\nState: <path>\nSubagent: <key>\nWorkdir: <path>\nTarget: <criteria>\nRound: N\nReport to: {channel, target, threadId}\n\nSteps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress 4.If !done: next step+subagent+STATE+cron 5.If done: set complete+final report"},
+  payload={kind:"agentTurn", message:"...", timeoutSeconds:300},
+  delivery={mode:"none"},
   sessionTarget="isolated")
+```
+
+Message template:
+```
+[auto-iterate:<id>] Wake: check round N
+
+State: <path>
+Subagent: <key>
+Workdir: <path>
+Target: <criteria>
+Round: N
+Report to: {channel, target, threadId}
+
+Steps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress via message(action=send) 4.If !done: next step+subagent+STATE+cron 5.If done: set complete+final report
 ```
 Each cron wake = **fresh isolated session** — agentTurn message MUST be self-contained.
 
