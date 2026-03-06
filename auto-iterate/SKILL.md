@@ -36,8 +36,7 @@ Multiple sequential iterations → number as tasks in STATE.md:
 - **current_task**: 1
 ```
 
-Task transition: current task criteria met → mark ✅ → more tasks? advance current_task, reset round=1, report task completion, continue loop → last task? set status=complete, send final report.
-Single iteration (no tasks field) = existing behavior unchanged.
+Single iteration (no tasks field) = existing behavior unchanged. See **Complete** in Loop for transition logic.
 
 ## Loop
 
