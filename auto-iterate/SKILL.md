@@ -96,6 +96,7 @@ State dir:
 - last_subagent_result: <summary|null>
 - no_fix_rounds: <int>
 - pending_retries: <int>   # consecutive waits on same pending subagent
+- cron_job_id: <current cron job id|null>  # for cleanup on advance/complete
 - complexity: trivial|simple|moderate|complex
 - heartbeat_tag: "[auto-iterate:<id>]"
 - report_to:
@@ -133,9 +134,10 @@ Per wake, do exactly:
    - If missing/failed/crashed: respawn equivalent subagent or pause+report (safety first).
 4. Check and update state.
 5. Send progress report.
-6. Decide one of: spawn subagent(s) / advance round or loop / pause / complete
-7. Schedule next cron wake if still running/awaiting-review.
-8. End turn.
+6. Decide one of: spawn subagent(s) / advance round or loop / pause / complete.
+7. **Cleanup before advance**: when advancing to a new round/loop, remove the current cron job (`cron(action="remove", jobId=<cron_job_id>)`) before creating the next one. Update `cron_job_id` in STATE.md.
+8. Schedule next cron wake if still running/awaiting-review.
+9. End turn.
 
 Do not run heavy edits (e.g., 5+ file edits) in coordinator; delegate to subagent.
 
@@ -191,6 +193,8 @@ This recovery path is mandatory for crashed/missed sessions.
 ## 8) Completion / Pause Rules
 
 Set `status=complete` only when user criteria are met.
+
+**On complete or pause**: remove all related cron jobs (`cron(action="remove", jobId=<cron_job_id>)`), remove heartbeat entry, then send final report.
 
 Pause (`status=paused`) and report when:
 - dead loop (`round>=3` and no meaningful fixes)
