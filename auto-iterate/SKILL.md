@@ -23,6 +23,7 @@ Use this skill as an orchestration protocol for **user-defined loops** (not a fi
 - Heavy execution (e.g., 5+ file edits) must run in subagent.
 - Report only via `message(action="send")`.
 - Spawned subagents must use `runTimeoutSeconds: 7200`.
+- **Every `sessions_spawn` must be followed by a cron wake in the same turn.** No cron = no monitoring = broken loop.
 - When spawning subagents via `sessions_spawn`, always pass your own `agentId` (same as cron).
 - Max total runtime per task: 3h (`deadline_at`). Exceeding it pauses loop and reports.
 - Re-read this skill every 3 rounds.
@@ -133,7 +134,7 @@ Per wake, do exactly:
 3. Run recovery branch in §7.
 4. Check and update state.
 5. Send progress report.
-6. Decide one of: spawn subagent(s) / advance round or loop / pause / complete.
+6. Decide one of: spawn subagent(s) / advance round or loop / pause / complete. **Mandatory post-spawn cron**: If you spawned a subagent, you MUST schedule a cron wake before ending the turn.
 7. **Cleanup before advance**: when advancing to a new task/loop, remove the current cron job (`cron(action="remove", jobId=<cron_job_id>)`), reset `deadline_at` to `now + 3h`, update `cron_job_id` in STATE.md.
 8. Schedule next cron wake if still running/awaiting-review.
 9. End turn.
