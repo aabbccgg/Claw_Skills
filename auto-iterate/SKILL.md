@@ -19,12 +19,14 @@ Use this skill as an orchestration protocol for **user-defined loops** (not a fi
 - Use `STATE.md` as single source of truth.
 - Continue only via cron self-wake using the **`cron` tool** (never `exec("openclaw cron ...")`).
 - Set `delivery: {mode: "none"}` on **every** cron job.
+- Set `payload.timeoutSeconds: 300` on every cron job. This is wake session runtime cap, **not** polling delay.
 - Heavy execution (e.g., 5+ file edits) must run in subagent.
 - Report only via `message(action="send")`.
 - Spawned subagents must use `runTimeoutSeconds: 7200`.
 - Max total runtime per task: 3h (`deadline_at`). Exceeding it pauses loop and reports.
 - Re-read this skill every 3 rounds.
 - On init, add heartbeat entry `[auto-iterate:<id>]`.
+- Every cron wake message must be **self-contained**: include state path, subagent session key, workdir, report_to, and the self-propagating constraint line (see §6).
 
 ---
 
@@ -147,6 +149,7 @@ Cron self-wake must use `cron(action="add")` only (never `exec("openclaw cron ..
 - `payload.timeoutSeconds: 300`
 - `delivery: {mode: "none"}`
 - `sessionTarget: "isolated"`
+- `agentId: "<own_agentId>"` (read from runtime info)
 
 Coordinator wake is strictly: **check → report (`message(action="send")`) → spawn/advance → schedule → END**.
 
@@ -167,6 +170,20 @@ When polling the same subagent within one round, interval shortens on consecutiv
 - `delay = max(60, round(base * factor))`
 
 Reset to 100% when advancing to the next round.
+
+### Wake message template
+
+Each wake = fresh isolated session with no history. Message must include:
+- iteration id + round number
+- state path (absolute)
+- subagent session key
+- workdir
+- target criteria
+- report_to
+
+And this line **verbatim** (self-propagating constraint):
+
+`⚠️ RULES(copy this line verbatim into every child cron): ONE ROUND→END. cron(action="add")→YES, exec("openclaw cron")→NO. message(action="send")→YES. delivery={mode:"none"}. Heavy work→spawn subagent.`
 
 ---
 
