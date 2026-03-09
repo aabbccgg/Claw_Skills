@@ -22,7 +22,7 @@ Use this skill as an orchestration protocol for **user-defined loops** (not a fi
 - Heavy execution (e.g., 5+ file edits) must run in subagent.
 - Report only via `message(action="send")`.
 - Spawned subagents must use `runTimeoutSeconds: 3600`.
-- Max total runtime: 2h (`deadline_at`). Exceeding it pauses loop and reports.
+- Max total runtime per task: 2h (`deadline_at`). Exceeding it pauses loop and reports.
 - Re-read this skill every 3 rounds.
 - On init, add heartbeat entry `[auto-iterate:<id>]`.
 
@@ -79,7 +79,7 @@ State dir:
 - target: <global completion criteria>
 - status: running|paused|complete
 - started_at: <ISO8601>
-- deadline_at: <ISO8601, started_at+2h>
+- deadline_at: <ISO8601, started_at+2h*task_count>
 - current: <human-readable current action>
 - round: <int>
 - loops_mode: sequential|parallel
@@ -95,7 +95,7 @@ State dir:
 - subagent_session: <latest session id|null>
 - last_subagent_result: <summary|null>
 - no_fix_rounds: <int>
-- pending_retries: <int>   # consecutive waits on same pending subagent
+- retry_count: <int>  # subagent crash/timeout respawn count, max 4
 - cron_job_id: <current cron job id|null>  # for cleanup on advance/complete
 - complexity: trivial|simple|moderate|complex
 - heartbeat_tag: "[auto-iterate:<id>]"
@@ -130,7 +130,7 @@ Per wake, do exactly:
 3. Recovery branch:
    - If `status=awaiting-review`, check `subagent_session` via `sessions_history`.
    - If subagent completed: ingest result, clear awaiting flag, continue.
-   - If still running/pending: increment `pending_retries`, apply delay-decay scheduling, end turn.
+   - If still running/pending: schedule next wake delay-decay scheduling, end turn.
    - If missing/failed/crashed: respawn equivalent subagent or pause+report (safety first).
 4. Check and update state.
 5. Send progress report.
@@ -161,7 +161,7 @@ Coordinator wake is strictly: **check → report (`message(action="send")`) → 
 - moderate: **360s**
 - complex: **480s**
 
-### Pending retry decay
+### delay-decay
 
 For consecutive wakes where subagent is still pending:
 - `R1`: 100% of base
@@ -169,8 +169,6 @@ For consecutive wakes where subagent is still pending:
 - `R3+`: 50% of base
 - floor: `min 60s`
 - `delay = max(60, round(base * factor))`
-
-Pending retries exceed 20 (timeout-style stall).
 
 ---
 
@@ -182,7 +180,7 @@ At wake start, always recover from persisted state:
 2. If `status=awaiting-review`:
    - Check `subagent_session` via `sessions_history`.
    - If subagent completed: ingest result, clear awaiting flag, continue coordinator flow.
-   - If still running/pending: increment `pending_retries`, apply delay-decay scheduling, end turn.
+   - If still running/pending: schedule next wake at delay-decay scheduling, end turn.
    - If missing/failed/crashed: either respawn equivalent subagent or pause and report (depends on safety).
 3. If stale wake and already complete: `NO_REPLY`.
 
@@ -198,8 +196,8 @@ Set `status=complete` only when user criteria are met.
 
 Pause (`status=paused`) and report when:
 - dead loop (`round>=3` and no meaningful fixes)
-- runtime exceeded 2h
+- per task runtime exceeded 2h
 - ambiguity blocks requiring user decision
-- pending retries exceed 20
+- retry_count >= 3
 
 Only the session that sets `status=complete` sends final completion report.
