@@ -154,10 +154,10 @@ Coordinator wake is strictly: **check → report (`message(action="send")`) → 
 
 ### Delay base by complexity
 
-- trivial: **30s**
-- simple: **60s**
-- moderate: **120s**
-- complex: **240s**
+- trivial: **120s**
+- simple: **240s**
+- moderate: **360s**
+- complex: **480s**
 
 ### Pending retry decay
 
@@ -165,8 +165,8 @@ For consecutive wakes where subagent is still pending:
 - `R1`: 100% of base
 - `R2`: 75% of base
 - `R3+`: 50% of base
-- floor: `min 15s`
-- `delay = max(15, round(base * factor))`
+- floor: `min 60s`
+- `delay = max(60, round(base * factor))`
 
 Pending retries exceed 20 (timeout-style stall).
 
