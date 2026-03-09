@@ -21,8 +21,8 @@ Use this skill as an orchestration protocol for **user-defined loops** (not a fi
 - Set `delivery: {mode: "none"}` on **every** cron job.
 - Heavy execution (e.g., 5+ file edits) must run in subagent.
 - Report only via `message(action="send")`.
-- Spawned subagents must use `runTimeoutSeconds: 3600`.
-- Max total runtime per task: 2h (`deadline_at`). Exceeding it pauses loop and reports.
+- Spawned subagents must use `runTimeoutSeconds: 7200`.
+- Max total runtime per task: 3h (`deadline_at`). Exceeding it pauses loop and reports.
 - Re-read this skill every 3 rounds.
 - On init, add heartbeat entry `[auto-iterate:<id>]`.
 
@@ -77,9 +77,9 @@ State dir:
 - id: <iteration_id>
 - task: <user task summary>
 - target: <global completion criteria>
-- status: running|paused|complete
+- status: running|paused|complete|awaiting-review
 - started_at: <ISO8601>
-- deadline_at: <ISO8601, started_at+2h*task_count>
+- deadline_at: <ISO8601, started_at+3h>
 - current: <human-readable current action>
 - round: <int>
 - loops_mode: sequential|parallel
@@ -127,15 +127,11 @@ Per wake, do exactly:
 
 1. Read `STATE.md` first.
 2. If `status=complete` (including stale wake) → `NO_REPLY`.
-3. Recovery branch:
-   - If `status=awaiting-review`, check `subagent_session` via `sessions_history`.
-   - If subagent completed: ingest result, clear awaiting flag, continue.
-   - If still running/pending: schedule next wake delay-decay scheduling, end turn.
-   - If missing/failed/crashed: respawn equivalent subagent or pause+report (safety first).
+3. Run recovery branch in §7.
 4. Check and update state.
 5. Send progress report.
 6. Decide one of: spawn subagent(s) / advance round or loop / pause / complete.
-7. **Cleanup before advance**: when advancing to a new round/loop, remove the current cron job (`cron(action="remove", jobId=<cron_job_id>)`) before creating the next one. Update `cron_job_id` in STATE.md.
+7. **Cleanup before advance**: when advancing to a new task/loop, remove the current cron job (`cron(action="remove", jobId=<cron_job_id>)`), reset `deadline_at` to `now + 3h`, update `cron_job_id` in STATE.md.
 8. Schedule next cron wake if still running/awaiting-review.
 9. End turn.
 
@@ -161,14 +157,16 @@ Coordinator wake is strictly: **check → report (`message(action="send")`) → 
 - moderate: **360s**
 - complex: **480s**
 
-### delay-decay
+### Delay decay within a round
 
-For consecutive wakes where subagent is still pending:
-- `R1`: 100% of base
-- `R2`: 75% of base
-- `R3+`: 50% of base
-- floor: `min 60s`
+When polling the same subagent within one round, interval shortens on consecutive wakes:
+- 1st poll: 100% of base
+- 2nd poll: 75% of base
+- 3rd+ poll: 50% of base
+- floor: min 60s
 - `delay = max(60, round(base * factor))`
+
+Reset to 100% when advancing to the next round.
 
 ---
 
@@ -179,9 +177,9 @@ At wake start, always recover from persisted state:
 1. Read `STATE.md`.
 2. If `status=awaiting-review`:
    - Check `subagent_session` via `sessions_history`.
-   - If subagent completed: ingest result, clear awaiting flag, continue coordinator flow.
+   - If subagent completed: ingest result, clear awaiting flag. If round produced 0 fixes → increment `no_fix_rounds`; otherwise reset `no_fix_rounds` to 0. Continue coordinator flow.
    - If still running/pending: schedule next wake at delay-decay scheduling, end turn.
-   - If missing/failed/crashed: either respawn equivalent subagent or pause and report (depends on safety).
+   - If missing/failed/crashed: increment `retry_count`. If `retry_count >= 4` → pause and report. Otherwise respawn equivalent subagent.
 3. If stale wake and already complete: `NO_REPLY`.
 
 This recovery path is mandatory for crashed/missed sessions.
@@ -195,9 +193,9 @@ Set `status=complete` only when user criteria are met.
 **On complete or pause**: remove all related cron jobs (`cron(action="remove", jobId=<cron_job_id>)`), remove heartbeat entry, then send final report.
 
 Pause (`status=paused`) and report when:
-- dead loop (`round>=3` and no meaningful fixes)
-- per task runtime exceeded 2h
+- dead loop (`no_fix_rounds>=3` and no meaningful fixes)
+- per task runtime exceeded 3h
 - ambiguity blocks requiring user decision
-- retry_count >= 3
+- retry_count >= 4
 
 Only the session that sets `status=complete` sends final completion report.
