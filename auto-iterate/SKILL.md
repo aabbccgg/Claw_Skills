@@ -23,7 +23,7 @@ Use this skill as an orchestration protocol for **user-defined loops** (not a fi
 - Heavy execution (e.g., 5+ file edits) must run in subagent.
 - Report only via `message(action="send")`.
 - Spawned subagents must use `runTimeoutSeconds: 7200`.
-- When spawning subagents via `sessions_spawn`, always pass `agentId` matching your own agent (same as cron).
+- When spawning subagents via `sessions_spawn`, always pass your own `agentId` (same as cron).
 - Max total runtime per task: 3h (`deadline_at`). Exceeding it pauses loop and reports.
 - Re-read this skill every 3 rounds.
 - On init, add heartbeat entry `[auto-iterate:<id>]`.
