@@ -106,7 +106,7 @@ Each cron wake = **fresh isolated session** — agentTurn message MUST be self-c
 
 ### Delay
 
-Trivial 5s, simple 15s, moderate 45s, complex 90s.
+Trivial 30s, simple 60s, moderate 120s, complex 300s.
 Decay on pending: R1=100% R2=75% R3+=50% of initial (min 5s); >20 retries → pause.
 
 ## Subagent Timeout
