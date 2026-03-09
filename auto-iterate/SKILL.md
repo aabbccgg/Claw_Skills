@@ -1,8 +1,6 @@
 ---
 name: auto-iterate
-description: >
-  REQUIRED for multi-iteration tasks. Loops a workflow until criteria met.
-  Triggers: "自动迭代", "迭代", "循环执行", "重复直到", "iterate until done", "loop until".
+description: Execute user-defined iterative workflows (single, nested, sequential, or parallel) until explicit completion criteria are met. REQUIRED when user requests 自动迭代, 循环迭代, 迭代, 循环执行, 重复直到, “iterate until”, or “loop until”.
 metadata:
   {
     "openclaw":
@@ -14,106 +12,189 @@ metadata:
 
 # Auto-Iterate
 
-**Round** = execute + review + fix. **Stop** = user criteria AND P0=0 P1=0.
-State dir: `~/.openclaw/workspace/iterations/<YYYYMMDD-HHMMSS-desc>/`.
-STATE.md = single source of truth.
-P0 blocks round (retry once; fails → pause). P2: fix or skip.
+Use this skill as an orchestration protocol for **user-defined loops** (not a fixed template).
 
-## Rules
+## Non-Negotiables
 
-1. Read+update STATE.md each turn. Required fields: task, target, current, status, subagent_session, last_subagent_result. Max 2h total → pause. Re-read this skill every 3 rounds (round%3==0).
-2. Inline review by default. Subagent only when isolation/model/user requires it.
-3. Validate: ≥1 step + ≥1 criterion. Ask if missing.
+- Use `STATE.md` as single source of truth.
+- Continue only via cron self-wake using the **`cron` tool** (never `exec("openclaw cron ...")`).
+- Heavy execution (e.g., 5+ file edits) must run in subagent.
+- Report only via `message(action="send")`.
+- Spawned subagents must use `runTimeoutSeconds: 3600`.
+- Max total runtime: 2h (`deadline_at`). Exceeding it pauses loop and reports.
+- Re-read this skill every 3 rounds.
+- On init, add heartbeat entry `[auto-iterate:<id>]`.
 
-## Multi-Task
+---
 
-Multiple sequential iterations → number as tasks in STATE.md:
+## 1) Admission Gate — REQUIRED BEFORE ROUND 1
 
+Do **not** start iteration until both are present:
+
+1. **At least 1 executable step/function**
+2. **At least 1 explicit completion criterion**
+
+If either is missing: block execution, ask user for missing info, and wait.
+
+Minimum acceptable structure:
+- Steps: `func1 -> func2 -> ...` (or loop definitions)
+- Criteria: testable completion condition(s)
+
+---
+
+## 2) Loop Topology & Execution Semantics
+
+Infer mode from wording:
+- Sequential: `先...再...`, `做完A后做B`
+- Parallel: `同时`, `并行`, `一起推进`
+
+If ambiguous/conflicting, ask explicitly.
+
+Validate each loop has:
+- ordered function list
+- loop-local exit condition
+- dependency/parallel-safety constraints
+
+Execution:
+- Single loop: run all functions in order, then evaluate exit condition.
+- Nested loop: enter child loop → run until child exit → return to parent.
+- Parallel branches: if independent/safe, run branch subagents in parallel, then merge outputs.
+- Multiple loops:
+  - Sequential mode: loop1 → loop2 → ...
+  - Parallel mode: progress actionable loops concurrently each wake.
+
+---
+
+## 3) STATE.md Schema (Required)
+
+State dir:
+`~/.openclaw/<your_agent_workspace>/iterations/<YYYYMMDD-HHMMSS-desc>/`
+
+`STATE.md` must include:
+
+```md
+- id: <iteration_id>
+- task: <user task summary>
+- target: <global completion criteria>
+- status: running|paused|complete
+- started_at: <ISO8601>
+- deadline_at: <ISO8601, started_at+2h>
+- current: <human-readable current action>
+- round: <int>
+- loops_mode: sequential|parallel
+- loops:
+  - id: <loop_id>
+    parent: <null|loop_id>
+    funcs: [<func...>]
+    exit_condition: <text>
+    round: <int>
+    status: pending|running|paused|complete
+    current_func: <index/name>
+- active_loops: [<loop_id>...]
+- subagent_session: <latest session id|null>
+- last_subagent_result: <summary|null>
+- no_fix_rounds: <int>
+- pending_retries: <int>   # consecutive waits on same pending subagent
+- complexity: trivial|simple|moderate|complex
+- heartbeat_tag: "[auto-iterate:<id>]"
+- report_to:
+    channel: <channel>
+    target: <user_or_group_id>
+    threadId: <topic_id optional>
 ```
-- **tasks**:
-  1. [dev-cycle] dev→test→fix→security→fix per roadmap | ⬜
-  2. [full-qa] full project test→fix→security→fix | ⬜
-- **current_task**: 1
-```
 
-The loop continues across all tasks — completing one task automatically advances to the next. `status=complete` is only set when the last task finishes.
-Single iteration (no tasks field) = existing behavior unchanged.
+`report_to`:
+- DM: `{channel, target}`
+- Group topic: `{channel, target, threadId}`
 
-## Loop
+---
 
-**Init**: create task dir + STATE.md + heartbeat entry (`[auto-iterate:<id>]`) + report start.
-**Round**: execute step → spawn subagent review → cron self-wake → on wake: check result → **report progress** → complete or increment+loop.
-**Complete**: task criteria met → multi-task with more tasks? advance current_task + reset round + report task completion + continue → otherwise: set status=complete + remove heartbeat/cron + **report final result**.
+## 4) Init Procedure
 
-## Reporting
+1. Create state dir + `STATE.md`.
+2. Write validated steps/criteria and loop topology.
+3. Add heartbeat entry `[auto-iterate:<id>]`.
+4. Send start message via `message(action="send")` using `report_to`.
+5. Schedule first cron wake.
 
-Always use `message(action="send")` for progress and completion — cron isolated sessions have no chat delivery.
-Store `report_to` in STATE.md at init (detect from inbound context):
-```
-- **report_to**: {channel: "telegram", target: "<user_id>"}                        # DM
-- **report_to**: {channel: "telegram", target: "<group_id>", threadId: "<topic_id>"} # group topic
-```
-Report each round: `message(action="send", channel="<channel>", target="<target>", [threadId="<topic>",] message="⚡ Round 3/7 — <status>")`. Only include `threadId` for group topics.
-**Only the session that sets status=complete sends the final report.** Already complete → NO_REPLY.
+---
 
-## Cron Wake
+## 5) Cron Wake Coordinator (One Wake = One Coordination Cycle, with Recovery)
 
-⚠️ Subagent auto-announce does NOT trigger an agent turn. Only cron self-wake drives loop continuation.
-Always use `sessionTarget="isolated"` — keeps each wake stateless and avoids polluting any persistent session.
+Per wake, do exactly:
 
-### One round per cron wake
+1. Read `STATE.md` first.
+2. If `status=complete` (including stale wake) → `NO_REPLY`.
+3. Recovery branch:
+   - If `status=awaiting-review`, check `subagent_session` via `sessions_history`.
+   - If subagent completed: ingest result, clear awaiting flag, continue.
+   - If still running/pending: increment `pending_retries`, apply delay-decay scheduling, end turn.
+   - If missing/failed/crashed: respawn equivalent subagent or pause+report (safety first).
+4. Check and update state.
+5. Send progress report.
+6. Decide one of: spawn subagent(s) / advance round or loop / pause / complete
+7. Schedule next cron wake if still running/awaiting-review.
+8. End turn.
 
-One round per wake: check subagent → report → next step → spawn subagent → cron → END TURN.
+Do not run heavy edits (e.g., 5+ file edits) in coordinator; delegate to subagent.
 
-### Stale wake detection
+---
 
-On wake: read STATE.md FIRST. If `status=complete` → `NO_REPLY`, do nothing.
+## 6) Cron Contract + Delay Decay (REQUIRED)
 
-### Schedule timestamp
+Cron self-wake must use `cron(action="add")` only (never `exec("openclaw cron ...")`) with:
+- `schedule.kind: "at"` (UTC timestamp)
+- `payload.kind: "agentTurn"`
+- `payload.timeoutSeconds: 300`
+- `delivery: {mode: "none"}`
+- `sessionTarget: "isolated"`
 
-Compute `at` dynamically: `date -u -d '+Ns' '+%Y-%m-%dT%H:%M:%SZ'` (N = delay seconds). Never hardcode.
+Coordinator wake is strictly: **check → report (`message(action="send")`) → spawn/advance → schedule → END**.
 
-### Cron template (all agents)
+### Delay base by complexity
 
-⚠️ Use the `cron` tool directly. Do NOT use `exec` / CLI (`openclaw cron add ...`) — CLI calls can be aborted mid-execution, breaking the loop.
+- trivial: **30s**
+- simple: **60s**
+- moderate: **120s**
+- complex: **240s**
 
-Read own agentId from runtime info (e.g. `main`, `general`), pass as `agentId` on the job:
+### Pending retry decay
 
-```
-cron(action="add", schedule={kind:"at", at:"<UTC timestamp>"},
-  agentId="<own_agentId>",
-  payload={kind:"agentTurn", message:"...", timeoutSeconds:300},
-  delivery={mode:"none"},
-  sessionTarget="isolated")
-```
+For consecutive wakes where subagent is still pending:
+- `R1`: 100% of base
+- `R2`: 75% of base
+- `R3+`: 50% of base
+- floor: `min 15s`
+- `delay = max(15, round(base * factor))`
 
-Message template:
-```
-[auto-iterate:<id>] Wake: check round N
+Pending retries exceed 20 (timeout-style stall).
 
-State: <path>
-Subagent: <key>
-Workdir: <path>
-Target: <criteria>
-Round: N
-Report to: {channel, target, threadId}
+---
 
-⚠️ RULES(copy this line verbatim into every child cron): ONE STEP→END. cron(action="add")→YES, exec("openclaw cron")→NO. message(action="send")→YES. delivery={mode:"none"}.
+## 7) Crash / Restart Recovery (State Recovery)
 
-Steps: 1.Read STATE (if complete→NO_REPLY) 2.sessions_history 3.Report progress via message(action=send) 4.If !done: schedule next cron wake → END TURN 5.If done: spawn next subagent+STATE+cron → END TURN 6.If task done+more tasks: advance task+reset round+report+continue 7.If all tasks done: set complete+final report
-```
-Each cron wake = **fresh isolated session** — agentTurn message MUST be self-contained.
+At wake start, always recover from persisted state:
 
-### Delay
+1. Read `STATE.md`.
+2. If `status=awaiting-review`:
+   - Check `subagent_session` via `sessions_history`.
+   - If subagent completed: ingest result, clear awaiting flag, continue coordinator flow.
+   - If still running/pending: increment `pending_retries`, apply delay-decay scheduling, end turn.
+   - If missing/failed/crashed: either respawn equivalent subagent or pause and report (depends on safety).
+3. If stale wake and already complete: `NO_REPLY`.
 
-Trivial 30s, simple 60s, moderate 120s, complex 300s.
-Decay on pending: R1=100% R2=75% R3+=50% of initial (min 5s); >20 retries → pause.
+This recovery path is mandatory for crashed/missed sessions.
 
-## Subagent Timeout
+---
 
-Always set `runTimeoutSeconds: 3600` (60 min) on spawned subagents. Prevents infinite cron polling if subagent hangs.
+## 8) Completion / Pause Rules
 
-## Edge Cases
+Set `status=complete` only when user criteria are met.
 
-Dead loop: 3+ rounds with issues but 0 fixed, or no issues but criteria unmet → pause.
-Recovery: read STATE.md; if `awaiting-review`: check subagent via `sessions_history` and reschedule wake.
+Pause (`status=paused`) and report when:
+- dead loop (`round>=3` and no meaningful fixes)
+- runtime exceeded 2h
+- ambiguity blocks requiring user decision
+- pending retries exceed 20
+
+Only the session that sets `status=complete` sends final completion report.
