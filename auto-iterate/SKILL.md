@@ -18,6 +18,7 @@ Use this skill as an orchestration protocol for **user-defined loops** (not a fi
 
 - Use `STATE.md` as single source of truth.
 - Continue only via cron self-wake using the **`cron` tool** (never `exec("openclaw cron ...")`).
+- Set `delivery: {mode: "none"}` on **every** cron job.
 - Heavy execution (e.g., 5+ file edits) must run in subagent.
 - Report only via `message(action="send")`.
 - Spawned subagents must use `runTimeoutSeconds: 3600`.
