@@ -1,220 +1,275 @@
 ---
 name: auto-iterate
-description: Execute user-defined iterative workflows (single, nested, sequential, or parallel) until explicit completion criteria are met. REQUIRED when user requests 自动迭代, 循环迭代, 迭代, 循环执行, 重复直到, “iterate until”, or “loop until”.
-metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🔄",
-      },
-  }
+description: Execute user-directed iterative workflows until explicit completion criteria are met. Use for 自动迭代, 循环迭代, 迭代, 循环执行, 重复直到, “iterate until”, or “loop until”, including single loops, nested loops, sequential multi-loop plans, and parallel branch orchestration with cron-based polling, watchdog recovery, and quota-aware resume.
 ---
 
 # Auto-Iterate
 
-Use this skill as an orchestration protocol for **user-defined loops** (not a fixed template).
+Use this skill as a strict orchestration protocol for iteration. Treat the user's loop definition and exit criteria as authoritative.
 
-## Non-Negotiables
+## 1. Start only after admission succeeds
 
-- Use `STATE.md` as single source of truth.
-- Continue only via cron self-wake using the **`cron` tool** (never `exec("openclaw cron ...")`).
-- Set `delivery: {mode: "none"}` on **every** cron job.
-- Set `payload.timeoutSeconds: 300` on every cron job. This is wake session runtime cap, **not** polling delay.
-- Heavy execution (e.g., 5+ file edits) must run in subagent.
-- Report only via `message(action="send")`.
-- Spawned subagents must use `runTimeoutSeconds: 7200`.
-- **Every `sessions_spawn` must be followed by a cron wake in the same turn.** No cron = no monitoring = broken loop.
-- When spawning subagents via `sessions_spawn`, always pass your own `agentId` (same as cron).
-- Max total runtime per task: 3h (`deadline_at`). Exceeding it pauses loop and reports.
-- Re-read this skill every 3 rounds.
-- On init, add heartbeat entry `[auto-iterate:<id>]`.
-- Every cron wake message must be **self-contained**: include state path, subagent session key, workdir, report_to, and the self-propagating constraint line (see §6).
+Require all of these before creating state:
+- The user explicitly asked for looping / repeat-until behavior.
+- There is at least one executable step, function, or branch definition.
+- There is at least one explicit, testable completion criterion.
+- The reporting destination can be persisted as `origin.report_to`.
 
----
+If any item is missing, stop and ask. Do not create state, spawn subagents, or schedule cron.
 
-## 1) Admission Gate — REQUIRED BEFORE ROUND 1
+## 2. Fix the roles
 
-Do **not** start iteration until both are present:
+Use exactly these actors:
+- **Interactive origin session** — validate inputs, persist routing, write initial state, install the first coordinator wake and watchdog, send kickoff. It is not the long-running coordinator.
+- **Coordinator** — an isolated cron wake only. It is the only writer to `STATE.md`. It alone may transition state, spawn or monitor subagents, schedule or remove wakes, and send authoritative user-visible reports.
+- **Subagent** — heavy execution only. It must not mutate orchestration state.
+- **Watchdog** — an isolated recurring cron wake that repairs liveness only. It does not do heavy work or user-task execution.
 
-1. **At least 1 executable step/function**
-2. **At least 1 explicit completion criterion**
+Never let a group session, DM session, or subagent become the coordinator after initialization.
 
-If either is missing: block execution, ask user for missing info, and wait.
+## 3. Obey the hard rules
 
-Minimum acceptable structure:
-- Steps: `func1 -> func2 -> ...` (or loop definitions)
-- Criteria: testable completion condition(s)
+- Keep all orchestration state in `STATE.md` as exactly one fenced YAML document. No prose state.
+- Read state from disk on every coordinator or watchdog wake. Never trust chat history.
+- Use persisted `origin.report_to` for all user-visible messages. Never infer routing from ambient session context.
+- Use first-class tools for scheduling and messaging: `cron(action="add"|"remove")`, `sessions_spawn`, `sessions_history`, `message(action="send")`.
+- Use the coordination fields from the canonical schema: `state_version`, `writer_session`, `lease_expires_at`, `current_wake_job_id`, `next_wake_job_id`, `watchdog_job_id`, `cleanup_pending`, `last_cycle_at`, `next_expected_wake_at`, and `pending_transition`.
+- If a fresh foreign lease exists, treat the wake as stale: re-read state and exit.
+- Run one coordination cycle per wake, in this exact order: `READ -> RECOVER -> DECIDE -> PERSIST -> SCHEDULE -> REPORT -> END`.
+- Commit state before reporting. `message(action="send")` never counts as persistence.
+- When spawning subagents, persist the subagent record first, schedule the successor wake in the same turn, persist the returned wake id, then report.
+- Replace coordinator wakes with add-before-remove. Persist the new wake id before removing the superseded one.
+- Keep `workflow_deadline_at = started_at + 3h` fixed. Use separate poll or resume timestamps for shorter waits.
+- Delegate heavy execution to subagents. Keep coordinator and watchdog turns small and deterministic.
+- Make every wake message self-contained: include iteration id, round, absolute state path, workdir, active loop or branch, active subagent ids, current wake id, workflow deadline, `report_to`, and next intended action.
 
----
+## 4. Create the state bundle
 
-## 2) Loop Topology & Execution Semantics
+Use a dedicated directory:
 
-Infer mode from wording:
-- Sequential: `先...再...`, `做完A后做B`
-- Parallel: `同时`, `并行`, `一起推进`
+`~/.openclaw/<agent_workspace>/iterations/<YYYYMMDD-HHMMSS-slug>/`
 
-If ambiguous/conflicting, ask explicitly.
+Create:
+- `STATE.md` — canonical YAML state
+- optional artifacts or summaries produced by the loop
 
-Validate each loop has:
-- ordered function list
-- loop-local exit condition
-- dependency/parallel-safety constraints
+Read `references/state-schema.md` before the first write and whenever the schema is in doubt.
 
-Execution:
-- Single loop: run all functions in order, then evaluate exit condition.
-- Nested loop: enter child loop → run until child exit → return to parent.
-- Parallel branches: if independent/safe, run branch subagents in parallel, then merge outputs.
-- Multiple loops:
-  - Sequential mode: loop1 → loop2 → ...
-  - Parallel mode: progress actionable loops concurrently each wake.
+Track, at minimum:
+- identity, workdir, task summary, and explicit target
+- `status`: `running | awaiting-review | paused | complete`
+- locked `origin.report_to`
+- fixed workflow deadline
+- coordination fields: version, lease, wake ids, watchdog id, cleanup queue, next expected wake, pending transition
+- loop topology: loops, branches, merge policy, current function
+- `subagents[]` records, one entry per active or completed worker
+- progress counters: retries, no-fix rounds, last result summary
+- pause and resume fields for quota suspension or user-blocked states
 
----
+## 5. Use the explicit state machine
 
-## 3) STATE.md Schema (Required)
+Allowed transitions:
 
-State dir:
-`~/.openclaw/<your_agent_workspace>/iterations/<YYYYMMDD-HHMMSS-desc>/`
+| From | Event | To |
+|---|---|---|
+| `running` | coordinator spawns work and durably commits successor wake | `awaiting-review` |
+| `awaiting-review` | coordinator ingests result and chooses the next action | `running` / `paused` / `complete` |
+| `running` | user ambiguity, retry exhaustion, dead loop, deadline, or quota suspension | `paused` |
+| `paused` | explicit resume event: user resume or quota-restored wake | `running` |
+| `running` | global completion criteria met and terminal cleanup committed | `complete` |
 
-`STATE.md` must include:
+Forbidden transitions:
+- `complete -> *`
+- `paused -> running` without an explicit resume event
+- `awaiting-review -> awaiting-review` after successful result ingestion
 
-```md
-- id: <iteration_id>
-- task: <user task summary>
-- target: <global completion criteria>
-- status: running|paused|complete|awaiting-review
-- started_at: <ISO8601>
-- deadline_at: <ISO8601, started_at+3h>
-- current: <human-readable current action>
-- round: <int>
-- loops_mode: sequential|parallel
-- loops:
-  - id: <loop_id>
-    parent: <null|loop_id>
-    funcs: [<func...>]
-    exit_condition: <text>
-    round: <int>
-    status: pending|running|paused|complete
-    current_func: <index/name>
-- active_loops: [<loop_id>...]
-- subagent_session: <latest session id|null>
-- last_subagent_result: <summary|null>
-- no_fix_rounds: <int>
-- retry_count: <int>  # subagent crash/timeout respawn count, max 4
-- cron_job_id: <current cron job id|null>  # for cleanup on advance/complete
-- complexity: trivial|simple|moderate|complex
-- heartbeat_tag: "[auto-iterate:<id>]"
-- report_to:
-    channel: <channel>
-    target: <user_or_group_id>
-    threadId: <topic_id optional>
-```
+After ingesting any successful subagent result, choose exactly one next transition before ending the wake. Never stay in limbo.
 
-`report_to`:
-- DM: `{channel, target}`
-- Group topic: `{channel, target, threadId}`
+## 6. Initialize in one safe transaction
 
----
+1. Normalize the loop topology:
+   - single loop
+   - nested loop
+   - multiple loops in `sequential` or `parallel` mode
+   - parallel branches with stable `branch_id` values and declared `merge_policy`
+2. Create the state directory.
+3. Write initial `STATE.md` with:
+   - `status: running`
+   - zeroed counters
+   - locked `origin.report_to`
+   - fixed deadline
+   - empty `subagents[]`
+4. Add the first isolated coordinator wake and persist its job id.
+5. Add one independent watchdog cron with `deleteAfterRun: false` and persist its job id.
+6. Only after state + coordinator wake + watchdog are durable, send the kickoff message.
 
-## 4) Init Procedure
+## 7. Run the coordinator cycle exactly once per wake
 
-1. Create state dir + `STATE.md`.
-2. Write validated steps/criteria and loop topology.
-3. Add heartbeat entry `[auto-iterate:<id>]`.
-4. Send start message via `message(action="send")` using `report_to`.
-5. Schedule first cron wake.
-
----
-
-## 5) Cron Wake Coordinator (One Wake = One Coordination Cycle, with Recovery)
-
-Per wake, do exactly:
-
-1. Read `STATE.md` first.
-2. If `status=complete` (including stale wake) → `NO_REPLY`.
-3. Run recovery branch in §7.
-4. Check and update state.
-5. Send progress report.
-6. Decide one of: spawn subagent(s) / advance round or loop / pause / complete. **Mandatory post-spawn cron**: If you spawned a subagent, you MUST schedule a cron wake before ending the turn.
-7. **Cleanup before advance**: when advancing to a new task/loop, remove the current cron job (`cron(action="remove", jobId=<cron_job_id>)`), reset `deadline_at` to `now + 3h`, update `cron_job_id` in STATE.md.
-8. Schedule next cron wake if still running/awaiting-review.
-9. End turn.
-
-Do not run heavy edits (e.g., 5+ file edits) in coordinator; delegate to subagent.
-
----
-
-## 6) Cron Contract + Delay Decay (REQUIRED)
-
-Cron self-wake must use `cron(action="add")` only (never `exec("openclaw cron ...")`) with:
-- `schedule.kind: "at"` (UTC timestamp)
-- `payload.kind: "agentTurn"`
-- `payload.timeoutSeconds: 300`
-- `delivery: {mode: "none"}`
-- `sessionTarget: "isolated"`
-- `agentId: "<own_agentId>"` (read from runtime info)
-
-Coordinator wake is strictly: **check → report (`message(action="send")`) → spawn/advance → schedule → END**.
-
-### Delay base by complexity
-
-- trivial: **120s**
-- simple: **240s**
-- moderate: **360s**
-- complex: **480s**
-
-### Delay decay within a round
-
-When polling the same subagent within one round, interval shortens on consecutive wakes:
-- 1st poll: 100% of base
-- 2nd poll: 75% of base
-- 3rd+ poll: 50% of base
-- floor: min 60s
-- `delay = max(60, round(base * factor))`
-
-Reset to 100% when advancing to the next round.
-
-### Wake message template
-
-Each wake = fresh isolated session with no history. Message must include:
-- iteration id + round number
-- state path (absolute)
-- subagent session key
-- workdir
-- target criteria
-- report_to
-
-And this line **verbatim** (self-propagating constraint):
-
-`⚠️ RULES(copy this line verbatim into every child cron): ONE ROUND→END. cron(action="add")→YES, exec("openclaw cron")→NO. message(action="send")→YES. delivery={mode:"none"}. Heavy work→spawn subagent.`
-
----
-
-## 7) Crash / Restart Recovery (State Recovery)
-
-At wake start, always recover from persisted state:
-
+### READ
 1. Read `STATE.md`.
-2. If `status=awaiting-review`:
-   - Check `subagent_session` via `sessions_history`.
-   - If subagent completed: ingest result, clear awaiting flag. If round produced 0 fixes → increment `no_fix_rounds`; otherwise reset `no_fix_rounds` to 0. Continue coordinator flow.
-   - If still running/pending: schedule next wake at delay-decay scheduling, end turn.
-   - If missing/failed/crashed: increment `retry_count`. If `retry_count >= 4` → pause and report. Otherwise respawn equivalent subagent.
-3. If stale wake and already complete: `NO_REPLY`.
+2. Exit quietly if `status: complete`.
+3. Claim the write lease. If another session already holds a fresh lease, exit.
+4. Re-read if the wake payload and the persisted state disagree; state wins.
 
-This recovery path is mandatory for crashed/missed sessions.
+### RECOVER
+5. Repair liveness first:
+   - If `coordination.current_wake_job_id` is missing, or `now > coordination.next_expected_wake_at`, create a replacement wake immediately and persist it.
+   - If cleanup of an old wake failed earlier, keep its id in `coordination.cleanup_pending[]` and retry later.
+6. Inspect each active subagent via `sessions_history`:
+   - `success`, `no-change`, `blocked`, or timeout with usable output: ingest it.
+   - still running: keep polling.
+   - failed, missing, or stalled: mark failure and apply retry policy.
+7. If a result was ingested, recompute loop exit conditions and choose the next transition now. Do not defer that decision.
 
----
+### DECIDE
+8. Choose exactly one next action:
+   - `spawn`
+   - `advance` within the current loop
+   - `advance` to the next loop or parent loop
+   - `pause`
+   - `complete`
 
-## 8) Completion / Pause Rules
+Decision rules:
+- Single loop: run ordered functions, then evaluate exit condition.
+- Nested loop: child loop must reach its exit condition before parent advances.
+- Sequential multi-loop: advance loop `n+1` only after loop `n` is complete.
+- Parallel branches: at most one active subagent per branch; merge only when the loop's `merge_policy` is satisfied.
+- Parallel top-level loops: advance every actionable loop on the same wake, but keep per-loop state separate.
 
-Set `status=complete` only when user criteria are met.
+### PERSIST
+9. Write the full updated state:
+   - `status`
+   - current loop, branch, and function
+   - counters
+   - subagent records
+   - `pending_transition`
+   - `last_cycle_at`
+   - `next_expected_wake_at`
+   - pause or resume fields
 
-**On complete or pause**: remove all related cron jobs (`cron(action="remove", jobId=<cron_job_id>)`), remove heartbeat entry, then send final report.
+### SCHEDULE
+10. If the workflow remains non-terminal, schedule the successor coordinator wake:
+   - `schedule.kind: "at"`
+   - `payload.kind: "agentTurn"`
+   - `payload.timeoutSeconds: 300`
+   - `delivery: {mode: "none"}`
+   - `sessionTarget: "isolated"`
+   - self-contained wake message
+11. Persist the new wake id as `coordination.next_wake_job_id`, promote it to `current_wake_job_id`, then remove the superseded wake id. If removal fails, retain it in `cleanup_pending[]`.
+12. If a subagent was spawned, ensure the successor wake is already durable before ending the turn.
 
-Pause (`status=paused`) and report when:
-- dead loop (`no_fix_rounds>=3` and no meaningful fixes)
-- per task runtime exceeded 3h
-- ambiguity blocks requiring user decision
-- retry_count >= 4
+### REPORT
+13. Send one progress message from committed state to `origin.report_to`. Use the report templates from `references/examples.md` §5. Every report must include: header with round + loop + local time, actor status lines with emoji (✅🔄❌⏸️), bullet details (commits, test results), next step, next check time (`⏰`), and remaining time to deadline (`📊`).
 
-Only the session that sets `status=complete` sends final completion report.
+### END
+14. Release the lease and end the turn. Never do a second cycle inside the same wake.
+
+## 8. Poll subagents and branches correctly
+
+Use `subagents[]`, not a singular session field.
+
+For each subagent record, persist:
+- `child_session_key`
+- `run_id`
+- `loop_id`
+- `branch_id` or `null`
+- `status`
+- `started_at`
+- `timeout_at`
+- `last_checked_at`
+- `summary`
+- `criteria_assessment`
+- `next_action_hint`
+
+Apply retries per loop or per branch, not globally across unrelated branches.
+
+Recommended polling delay by complexity:
+- trivial: 120s
+- simple: 240s
+- moderate: 360s
+- complex: 480s
+
+Within the same branch or serial step, decay polling to `100% -> 75% -> 50%`, with a 60s floor. Reset the streak when advancing to a new round or new branch.
+
+Treat subagent auto-announcements as best-effort diagnostics only. The coordinator still polls and still sends authoritative user messages.
+
+## 9. Install and use the watchdog
+
+Install one recurring watchdog cron when the workflow starts. Keep it separate from the coordinator wake chain.
+
+Watchdog job:
+- runs in an isolated session
+- uses `delivery: {mode: "none"}`
+- is non-deleting / recurring
+- reads only persisted state
+
+Watchdog duties:
+- detect missed coordinator wakes
+- detect stale `awaiting-review` states with no recent polling
+- recreate missing coordinator wakes
+- retain old wake ids in `cleanup_pending[]` until safely removed
+- increment `coordination.watchdog_tripped_count`
+- report only when repair failed or the workflow must pause
+
+A healthy workflow keeps both of these current:
+- `coordination.last_cycle_at`
+- `coordination.next_expected_wake_at`
+
+## 10. Integrate Claude quota suspension
+
+Before any expensive spawn or respawn, run the `claude-auto-resume` skill.
+
+If Claude quota is suspended:
+1. Set `status: paused`.
+2. Set `resume.mode: quota-auto`.
+3. Set `resume.blocked_by: claude-quota`.
+4. Persist `resume.resume_at` from the quota skill's safe resume time.
+5. Schedule an outer-loop resume wake at or after `resume.resume_at`.
+6. Report the pause to `origin.report_to`.
+7. End the turn.
+
+On the resume wake:
+- re-check quota through the `claude-auto-resume` skill
+- if clear, transition `paused -> running` and continue
+- if still suspended, update `resume.resume_at`, reschedule, and report once
+
+Keep the watchdog active during quota pauses.
+
+## 11. Route all user-visible messages through persisted routing
+
+Persist `origin.report_to` on init and never rewrite it.
+
+Use one of:
+- DM: `{channel: telegram, target: "<user id>"}`
+- group topic: `{channel: telegram, target: "-100...", threadId: "<topic id>"}`
+
+Send:
+- kickoff
+- progress
+- pause / resume
+- final completion
+
+Do not let subagents guess the user destination. If subagent output must reach the user, the coordinator relays it.
+
+## 12. Finish cleanly
+
+Complete only when the user's explicit criteria are met.
+
+Pause when any of these happens:
+- ambiguity requires user input
+- retries are exhausted for the active loop or branch
+- the workflow deadline is reached
+- repeated no-fix rounds show the loop is dead
+- automatic repair failed
+- quota suspension requires waiting
+
+On `complete` or terminal `paused`:
+1. Persist terminal state first.
+2. Remove every known wake id: current, next, watchdog, and anything in `cleanup_pending[]`.
+3. Mark cleanup completion in state.
+4. Send the final report once.
+
+Read references when needed:
+- `references/state-schema.md` — canonical YAML schema
+- `references/examples.md` — cron, spawn, wake, and routing templates
+- `references/recovery.md` — failure handling, watchdog repair, and quota-resume rules
