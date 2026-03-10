@@ -79,6 +79,11 @@ Watchdog repair rules:
 4. Avoid duplicate user reports if repair succeeds silently.
 5. Send a user-visible alert only when repair fails repeatedly or the workflow must pause.
 
+Routing discipline:
+- Coordinator is the only authoritative sender of progress / pause / resume / completion updates.
+- Watchdog may trigger repair and may request/report through the coordinator model, but it must not emit user-visible internal routing text.
+- Subagent results are diagnostic inputs; they must be rewritten by the coordinator before any user-visible send.
+
 ## Quota suspension integration
 
 Before expensive spawns or respawns, run the `claude-auto-resume` skill.

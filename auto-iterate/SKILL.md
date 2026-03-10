@@ -31,7 +31,7 @@ Never let a group session, DM session, or subagent become the coordinator after 
 
 - Keep all orchestration state in `STATE.md` as exactly one fenced YAML document. No prose state.
 - Read state from disk on every coordinator or watchdog wake. Never trust chat history.
-- Use persisted `origin.report_to` for all user-visible messages. Never infer routing from ambient session context.
+- Use persisted `origin.report_to` for all user-visible messages. The coordinator sends progress / pause / resume / completion messages directly to `origin.report_to` via `message(action="send")`. Never infer routing from ambient session context, and never require relay through the origin session.
 - Use first-class tools for scheduling and messaging: `cron(action="add"|"remove")`, `sessions_spawn`, `sessions_history`, `message(action="send")`.
 - Use the coordination fields from the canonical schema: `state_version`, `writer_session`, `lease_expires_at`, `current_wake_job_id`, `next_wake_job_id`, `watchdog_job_id`, `cleanup_pending`, `last_cycle_at`, `next_expected_wake_at`, and `pending_transition`.
 - If a fresh foreign lease exists, treat the wake as stale: re-read state and exit.
@@ -159,7 +159,7 @@ Decision rules:
 12. If a subagent was spawned, ensure the successor wake is already durable before ending the turn.
 
 ### REPORT
-13. Send one progress message from committed state to `origin.report_to`. Use the report templates from `references/examples.md` §5. Every report must include: header with round + loop + local time, actor status lines with emoji (✅🔄❌⏸️), bullet details (commits, test results), next step, next check time (`⏰`), and remaining time to deadline (`📊`).
+13. Send one user-visible status message from committed state directly to `origin.report_to` via `message(action="send")`. Do not emit internal routing notes such as `Should go to ...`, `send to ...`, or thread metadata in user-visible text. Use the templates from `references/examples.md` §5 for progress, pause, resume, watchdog-repair alerts, and final-style status messages. Every such message must include: header with round + loop + local time, actor/status lines with emoji (✅🔄❌⏸️▶️⚠️ as applicable), bullet details (commits, test results, repair actions), next step, next check time (`⏰`) when applicable, and remaining time to deadline (`📊`) when applicable.
 
 ### END
 14. Release the lease and end the turn. Never do a second cycle inside the same wake.
@@ -249,7 +249,13 @@ Send:
 - pause / resume
 - final completion
 
-Do not let subagents guess the user destination. If subagent output must reach the user, the coordinator relays it.
+Use this routing behavior:
+- the coordinator is the only authoritative sender
+- the coordinator sends directly to `origin.report_to`
+- the origin session is the task entrypoint, not a relay hop
+- subagents, tester/developer agents, and watchdog do not send user-visible progress to the user directly
+
+Do not let subagents guess the user destination. If subagent output must reach the user, the coordinator rewrites and relays it.
 
 ## 12. Finish cleanly
 

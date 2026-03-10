@@ -70,18 +70,20 @@ next_action_hint: advance
 
 Use this format for all user-visible progress messages. Adapt content to the current state; keep the structure.
 
+Routing rule: the coordinator sends these messages directly to `origin.report_to`. User-visible text must never include internal routing notes such as `Should go to ...`, raw `report_to` objects, `threadId`, or delivery instructions.
+
 ### During subagent execution (polling)
 
 ```text
-🔄 [auto-iterate] Round 3 | Loop: fix-rawdata-error (14:03 PM)
+🔄 [auto-iterate] Round 3 | Loop: fix-rawdata-error (2:03 PM)
 
-Developer 🔄 正在修复中
-• 已完成: 深色模式 ✅, 管理员白名单 ✅
-• 进行中: rawData.some 错误修复
+Developer 🔄 Working on the fix
+• Completed: dark mode ✅, admin whitelist ✅
+• In progress: rawData.some error fix
 
-下一步: 等待 developer 完成后交给 tester
-⏰ 下次检查: 14:09 PM
-📊 剩余时间: ~1h45m (deadline 15:48)
+Next: wait for developer completion, then hand off to tester
+⏰ Next check: 2:09 PM
+📊 Time remaining: ~1h45m (deadline 3:48 PM)
 ```
 
 ### After subagent completion + advancing
@@ -89,15 +91,15 @@ Developer 🔄 正在修复中
 ```text
 🔄 [auto-iterate] Round 2 (12:03 PM)
 
-Developer ✅ 已完成并提交 (ae9dca7)
-• Dashboard: gain/loss CSS classes、3Y 周期、defaultPeriod
-• Watchlist: 批量价格获取、价格列、EmptyState、搜索面板折叠
-• tsc ✅ | pytest 97 pass ✅
+Developer ✅ Completed and committed (ae9dca7)
+• Dashboard: gain/loss CSS classes, 3Y period, defaultPeriod
+• Watchlist: batch price fetch, price column, EmptyState, collapsed search panel
+• tsc ✅ | pytest 97 passed ✅
 
-Tester 🔄 已分派 R2 验证任务，正在执行…
+Tester 🔄 R2 verification dispatched and running…
 
-⏰ 下次检查: 12:11 PM
-📊 剩余时间: ~2h15m (deadline 14:18)
+⏰ Next check: 12:11 PM
+📊 Time remaining: ~2h15m (deadline 2:18 PM)
 ```
 
 ### Template fields (required)
@@ -105,41 +107,71 @@ Tester 🔄 已分派 R2 验证任务，正在执行…
 | Field | Source |
 |-------|--------|
 | Header | `🔄 [auto-iterate] Round {round}` + optional `Loop: {loop_id}` + `({HH:MM} local)` |
-| Actor lines | One per subagent/role. Use ✅ done, 🔄 running, ❌ failed, ⏸️ paused |
+| Actor lines | One per subagent/role. Use ✅ done, 🔄 running, ❌ failed, ⏸️ paused, ▶️ resumed, ⚠️ repair |
 | Bullet details | Commit hash, specific changes, test results — keep concise |
-| 下一步 | The decided next action from DECIDE step |
-| ⏰ 下次检查 | `next_expected_wake_at` in user's local time |
-| 📊 剩余时间 | `workflow_deadline_at - now`, with deadline time shown |
+| Next | The decided next action from DECIDE step |
+| ⏰ Next check | `next_expected_wake_at` in the user's local time |
+| 📊 Time remaining | `workflow_deadline_at - now`, with deadline time shown |
 
 ### Pause
 
 ```text
-⏸️ [auto-iterate] Round 4 | Loop: refine-code (15:30 PM)
+⏸️ [auto-iterate] Round 4 | Loop: refine-code (3:30 PM)
 
-原因: Claude 用量超限自动暂停
-预计恢复: 16:15 PM (quota reset + 90s)
-当前进度: 3/5 loops done, backend branch 等待恢复后继续
+Reason: Claude quota suspension
+Expected resume: 4:15 PM (quota reset + 90s)
+Current progress: 3/5 loops done, backend branch waiting to continue
 
-📊 剩余时间: ~18m (deadline 15:48)
+📊 Time remaining: ~18m (deadline 3:48 PM)
+```
+
+### Resume
+
+```text
+▶️ [auto-iterate] Round 4 | Loop: refine-code (4:16 PM)
+
+Status: automatic iteration resumed
+Reason: Claude quota restored / coordinator recovered control
+Current progress: backend branch resumed, preparing tester verification
+
+Next: continue Round 4 development and verification
+⏰ Next check: 4:24 PM
+📊 Time remaining: ~1h12m (deadline 5:28 PM)
+```
+
+### Watchdog / repair alert
+
+```text
+⚠️ [auto-iterate] Round 3 | Loop: round3 (2:20 PM)
+
+Status: coordinator wake failed, watchdog repaired the chain
+Handled: recreated the coordinator wake, retained the old wake for cleanup
+Impact: iteration state was preserved and will continue from the latest committed STATE
+
+Next: wait for the new coordinator wake to resume polling
+⏰ Next check: 2:28 PM
+📊 Time remaining: ~1h58m (deadline 4:18 PM)
 ```
 
 ### Final completion
 
 ```text
-✅ [auto-iterate] 完成! (15:42 PM)
+✅ [auto-iterate] Complete! (3:42 PM)
 
-共 4 轮迭代, 6 branches 全部通过
-• 核心修复: serializer、migration、dark mode
-• 测试: 97 pass ✅, 0 fail
-• 提交: ae9dca7 → f3b1c02
+Completed 4 rounds and 6 branches successfully
+• Core fixes: serializer, migration, dark mode
+• Tests: 97 passed ✅, 0 failed
+• Commits: ae9dca7 → f3b1c02
 
-已清理: coordinator wake + watchdog + 1 pending cleanup
-总耗时: 2h40m
+Cleanup: coordinator wake, watchdog, and 1 pending wake removed
+Total runtime: 2h40m
 ```
 
 ---
 
 ## 6. Telegram routing examples
+
+These are internal routing objects for the coordinator to use with `message(action="send")`. They are **not** part of the user-visible message body.
 
 DM:
 
