@@ -72,7 +72,7 @@ Track, at minimum:
 - coordination fields: version, lease, wake ids, watchdog id, cleanup queue, next expected wake, pending transition
 - loop topology: loops, branches, merge policy, current function
 - `subagents[]` records, one entry per active or completed worker
-- progress counters: retries, no-fix rounds, last result summary
+- progress fields: `progress.active_loop_ids`, retries, no-fix rounds, last result summary, `progress.last_failure_reason`
 - pause and resume fields for quota suspension or user-blocked states
 
 ## 5. Use the explicit state machine
@@ -112,6 +112,7 @@ After ingesting any successful subagent result, choose exactly one next transiti
    - fixed deadline
    - `execution_mode: spawned-worker | existing-agent`
    - empty `subagents[]`
+   - all other canonical schema fields initialized with explicit defaults (`false`, `null`, or `[]` as applicable)
 5. Add the first isolated coordinator wake and persist its job id.
 6. Add one independent watchdog cron with `deleteAfterRun: false` and persist its job id.
 7. Only after state + coordinator wake + watchdog are durable, send the kickoff message.
@@ -132,7 +133,7 @@ After ingesting any successful subagent result, choose exactly one next transiti
    - `success`, `no-change`, `blocked`, or timeout with usable output: ingest it.
    - still running: keep polling.
    - failed, missing, or stalled: mark failure and apply retry policy.
-7. If `coordination.alert_needed: true`, emit the `⚠️` watchdog-repair alert template from committed state at the next safe REPORT step, then clear `alert_needed`. If the watchdog used the narrow direct-alert exception, leave `alert_sent: true` and do not duplicate the alert.
+7. If `coordination.alert_needed: true`, plan a `⚠️` watchdog-repair alert for this cycle. Clear `alert_needed` during PERSIST, then emit the alert during REPORT. If the watchdog used the narrow direct-alert exception, leave `alert_sent: true` and do not duplicate the alert.
 8. If a result was ingested, recompute loop exit conditions and choose the next transition now. Do not defer that decision.
 
 ### DECIDE
@@ -159,6 +160,7 @@ Decision rules:
    - `pending_transition`
    - `last_cycle_at`
    - `next_expected_wake_at`
+   - alert flags when changed (`alert_needed`, `alert_sent`)
    - pause or resume fields
 
 ### SCHEDULE
@@ -184,7 +186,7 @@ Use `subagents[]`, not a singular session field.
 
 For each subagent record, persist:
 - `child_session_key`
-- `run_id`
+- `run_id` (`null` allowed in existing-agent mode)
 - `loop_id`
 - `branch_id` or `null`
 - `status`
@@ -207,7 +209,7 @@ Within the same branch or serial step, decay polling to `100% -> 75% -> 50%`, wi
 
 Treat subagent auto-announcements as best-effort diagnostics only. The coordinator still polls and still sends authoritative user messages.
 
-Existing-agent mode is optional, not the default. Treat it as best-effort orchestration, not the preferred worker path.
+Existing-agent mode is disabled unless session visibility and policy are explicitly confirmed. Treat it as best-effort orchestration, not the preferred worker path.
 
 Use existing-agent mode only when all are true:
 - the target session key is already known
@@ -220,9 +222,11 @@ If any condition is false, use `sessions_spawn` instead.
 
 When existing-agent mode is allowed, send the task via `sessions_send`. Track that session in `subagents[]` with `run_id: null` and `child_session_key` set to its known session key. Poll output via `sessions_history` using the same delay and retry policy as spawned subagents.
 
+`sessions_send` is not a silent RPC primitive: per OpenClaw semantics it may trigger reply-back ping-pong and a target-side announce step. Do not assume single-turn silent behavior.
+
 Dispatch message must be self-contained: include iteration id, round, workdir, exact task, expected output format, and state path (read-only reference — the external agent must not edit `STATE.md` or schedule cron). It must also instruct the target agent to keep output coordinator-ingestible and to avoid unnecessary ping-pong replies.
 
-If the target session produces noisy ping-pong, uncontrolled announce behavior, or output that cannot be cleanly ingested, abort existing-agent mode, persist the failure reason, and fall back to `sessions_spawn`.
+If the target session produces noisy ping-pong, uncontrolled announce behavior, or output that cannot be cleanly ingested, abort existing-agent mode, persist the failure reason in `progress.last_failure_reason`, and fall back to `sessions_spawn`.
 
 The coordinator ingests and rewrites all external-agent output before sending to `origin.report_to`. External agents never report to the user directly.
 
@@ -268,7 +272,7 @@ If quota is suspended:
 On the resume wake:
 1. Check `resume.blocked_by: claude-quota` in state.
 2. Re-verify quota directly.
-3. If clear: clear `resume.*` fields, transition `paused -> running`, report using the `▶️` Resume template from `references/examples.md` §5, and continue the coordinator cycle from `active_loop_ids` and current functions.
+3. If clear: clear `resume.*` fields, transition `paused -> running`, report using the `▶️` Resume template from `references/examples.md` §5, and continue the coordinator cycle from `progress.active_loop_ids` and current functions.
 4. If still suspended: update `resume.resume_at`, reschedule, and report using the `⏸️` Pause template from `references/examples.md` §5 only if the expected resume time materially changed.
 
 Keep the watchdog active during quota pauses.
@@ -311,9 +315,10 @@ On `complete` or terminal `paused`:
 1. Move `current_wake_job_id` and `next_wake_job_id` into `cleanup_pending[]`. Persist.
 2. Remove each id in `cleanup_pending[]`, excluding `watchdog_job_id`. Persist after each removal. Retain any failed ids in `cleanup_pending[]` for retry on the next watchdog run.
 3. Set `cleanup.wake_cleanup_complete: true` and persist.
-4. Send the final report using the `✅` Final completion template from `references/examples.md` §5.
-5. Set `cleanup.terminal_report_sent: true` and persist.
-6. After both flags are true, remove `watchdog_job_id`. If removal fails, the watchdog detects `terminal_report_sent: true` on its next run and removes itself without alerting.
+4. If the final report has not yet been delivered, send it using the `✅` Final completion template from `references/examples.md` §5.
+5. If final report delivery failed or `cleanup.terminal_report_sent` is still false, the watchdog or next recovered coordinator wake must retry the final report before shutdown.
+6. After the final report succeeds, set `cleanup.terminal_report_sent: true` and persist.
+7. After both flags are true, remove `watchdog_job_id`. If removal fails, the watchdog detects `terminal_report_sent: true` on its next run and removes itself without alerting.
 
 Read references when needed:
 - `references/state-schema.md` — canonical YAML schema

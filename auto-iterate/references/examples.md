@@ -5,15 +5,18 @@
 ```json
 {
   "action": "add",
-  "schedule": {"kind": "at", "at": "2026-03-10T05:20:00Z"},
-  "agentId": "<own_agent_id>",
-  "payload": {
-    "kind": "agentTurn",
-    "timeoutSeconds": 300,
-    "message": "[auto-iterate] coordinator wake\nIteration: iter-20260310-130200\nRound: 3\nStatus: awaiting-review\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: refine-code\nCurrent branch: backend\nSubagents: [child:abc]\nCurrent wake id: job_123\nWorkflow deadline: 2026-03-10T08:02:00Z\nNext action: poll\nReport_to: {channel: telegram, target: \"-100123\", threadId: \"17\"}\n⚠️ RULES: ONE CYCLE->END. Use cron tool, not shell. Commit state before report. Heavy work stays in subagent."
-  },
-  "delivery": {"mode": "none"},
-  "sessionTarget": "isolated"
+  "job": {
+    "name": "auto-iterate-coordinator-wake",
+    "schedule": {"kind": "at", "at": "2026-03-10T05:20:00Z"},
+    "agentId": "<own_agent_id>",
+    "payload": {
+      "kind": "agentTurn",
+      "timeoutSeconds": 300,
+      "message": "[auto-iterate] coordinator wake\nIteration: iter-20260310-130200\nRound: 3\nStatus: awaiting-review\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: refine-code\nCurrent branch: backend\nSubagents: [child:abc]\nCurrent wake id: job_123\nWorkflow deadline: 2026-03-10T08:02:00Z\nNext action: poll\nReport_to: {channel: telegram, target: \"-100123\", threadId: \"17\"}\n⚠️ RULES: ONE CYCLE->END. Use cron tool, not shell. Commit state before report. Heavy work stays in subagent."
+    },
+    "delivery": {"mode": "none"},
+    "sessionTarget": "isolated"
+  }
 }
 ```
 
@@ -22,16 +25,19 @@
 ```json
 {
   "action": "add",
-  "schedule": {"kind": "every", "everyMs": 600000},
-  "agentId": "<own_agent_id>",
-  "payload": {
-    "kind": "agentTurn",
-    "timeoutSeconds": 180,
-    "message": "[auto-iterate] watchdog wake\nState path: /abs/path/STATE.md\nRole: watchdog\nRepair only. No heavy work. No user-task execution."
-  },
-  "delivery": {"mode": "none"},
-  "sessionTarget": "isolated",
-  "deleteAfterRun": false
+  "job": {
+    "name": "auto-iterate-watchdog",
+    "schedule": {"kind": "every", "everyMs": 600000},
+    "agentId": "<own_agent_id>",
+    "payload": {
+      "kind": "agentTurn",
+      "timeoutSeconds": 180,
+      "message": "[auto-iterate] watchdog wake\nState path: /abs/path/STATE.md\nRole: watchdog\nRepair only. No heavy work. No user-task execution."
+    },
+    "delivery": {"mode": "none"},
+    "sessionTarget": "isolated",
+    "deleteAfterRun": false
+  }
 }
 ```
 

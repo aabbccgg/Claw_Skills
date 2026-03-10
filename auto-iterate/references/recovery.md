@@ -11,7 +11,7 @@ Run in this order on every isolated coordinator wake:
    - `current_wake_job_id` exists
    - `next_expected_wake_at` is not badly overdue
 5. If the wake chain is broken, add a replacement coordinator wake immediately and persist it before deeper work.
-6. If `coordination.alert_needed: true`, preserve it for the next recovered coordinator REPORT step; do not clear it until the coordinator emits the `⚠️` repair alert.
+6. If `coordination.alert_needed: true`, preserve it for the next recovered coordinator REPORT step; the coordinator clears it during PERSIST in the same cycle that emits the `⚠️` repair alert during REPORT.
 7. Inspect active subagents.
 8. Ingest finished results.
 9. Choose exactly one next transition.
@@ -102,7 +102,7 @@ If suspended:
 Resume sequence:
 1. Wake at `resume.resume_at`. Check `resume.blocked_by: claude-quota` in state.
 2. Re-verify quota directly.
-3. If clear: clear `resume.*`, transition `paused -> running`, report using the `▶️` Resume template, and continue from `active_loop_ids` and current functions.
+3. If clear: clear `resume.*`, transition `paused -> running`, report using the `▶️` Resume template, and continue from `progress.active_loop_ids` and current functions.
 4. If still blocked: update `resume.resume_at`, reschedule, and report using the `⏸️` Pause template only if resume time materially changed.
 
 ## Terminal cleanup
@@ -113,8 +113,9 @@ Sequence:
 1. Move `current_wake_job_id` and `next_wake_job_id` into `cleanup_pending[]`. Persist.
 2. Remove each id in `cleanup_pending[]`, excluding `watchdog_job_id`. Persist after each removal. Retain failed ids in `cleanup_pending[]`.
 3. Set `cleanup.wake_cleanup_complete: true` and persist.
-4. Send the final report using the `✅` Final completion template from `references/examples.md` §5, if not already sent.
-5. Set `cleanup.terminal_report_sent: true` and persist.
-6. After both flags are true, remove `watchdog_job_id`. If removal fails, the watchdog detects `terminal_report_sent: true` on its next run and removes itself without alerting.
+4. If the final report has not yet been delivered, send it using the `✅` Final completion template from `references/examples.md` §5.
+5. If final report delivery failed or `cleanup.terminal_report_sent` is still false, the watchdog or next recovered coordinator wake must retry the final report before shutdown.
+6. After the final report succeeds, set `cleanup.terminal_report_sent: true` and persist.
+7. After both flags are true, remove `watchdog_job_id`. If removal fails, the watchdog detects `terminal_report_sent: true` on its next run and removes itself without alerting.
 
 The watchdog remains active until both `cleanup.wake_cleanup_complete: true` and `cleanup.terminal_report_sent: true`.

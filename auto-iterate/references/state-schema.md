@@ -64,7 +64,7 @@ loops:
 
 subagents:
   - child_session_key: <session key>
-    run_id: <run id>
+    run_id: <run id or null for existing-agent mode>
     loop_id: <loop id>
     branch_id: <branch id or null>
     status: accepted|running|success|no-change|blocked|failed|timed-out|stalled
@@ -78,6 +78,7 @@ subagents:
 progress:
   active_loop_ids: []
   last_subagent_result: <short text or null>
+  last_failure_reason: <text or null>
   total_retry_count: <int>
   no_fix_rounds_total: <int>
 
@@ -102,7 +103,9 @@ cleanup:
 - `coordination.next_wake_job_id` exists only during add-before-remove handoff.
 - `coordination.cleanup_pending[]` retains obsolete wake ids that still need removal.
 - `coordination.alert_needed` marks that the coordinator should emit a repair-related user-visible status message.
+- `coordination.alert_needed` is cleared by the coordinator during PERSIST in the same cycle that will emit the repair alert during REPORT.
 - `coordination.alert_sent` prevents duplicate watchdog repair alerts when the watchdog must use the narrow direct-alert exception.
+- `progress.last_failure_reason` stores the latest orchestration or worker-mode failure reason, including existing-agent mode fallback causes.
 - `loops[].branches[]` is required for parallel branches. Use stable branch ids.
 - `subagents[]` is append/update history for workers. Do not collapse to one field.
 - `resume.*` captures pauses caused by quota or explicit user-blocked states.
