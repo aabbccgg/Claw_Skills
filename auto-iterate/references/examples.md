@@ -70,7 +70,7 @@ next_action_hint: advance
 
 Use this format for all user-visible progress messages. Adapt content to the current state; keep the structure.
 
-Routing rule: the coordinator sends these messages directly to `origin.report_to`. User-visible text must never include internal routing notes such as `Should go to ...`, raw `report_to` objects, `threadId`, or delivery instructions.
+Routing rule: the coordinator sends these messages directly to `origin.report_to` via `message(action="send")`. User-visible text must contain only content meaningful to the user — no routing metadata.
 
 ### During subagent execution (polling)
 

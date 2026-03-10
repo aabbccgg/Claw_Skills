@@ -11,13 +11,14 @@ Run in this order on every isolated coordinator wake:
    - `current_wake_job_id` exists
    - `next_expected_wake_at` is not badly overdue
 5. If the wake chain is broken, add a replacement coordinator wake immediately and persist it before deeper work.
-6. Inspect active subagents.
-7. Ingest finished results.
-8. Choose exactly one next transition.
-9. Persist full state.
-10. Schedule successor wake if still non-terminal.
-11. Remove old wake ids only after the replacement wake is durable.
-12. Report from committed state.
+6. If `coordination.alert_needed: true`, preserve it for the next recovered coordinator REPORT step; do not clear it until the coordinator emits the `⚠️` repair alert.
+7. Inspect active subagents.
+8. Ingest finished results.
+9. Choose exactly one next transition.
+10. Persist full state.
+11. Schedule successor wake if still non-terminal.
+12. Remove old wake ids only after the replacement wake is durable.
+13. Report from committed state.
 
 ## Broken wake chain repair
 
@@ -77,44 +78,43 @@ Watchdog repair rules:
 2. Persist repair data.
 3. Increment `watchdog_tripped_count`.
 4. Avoid duplicate user reports if repair succeeds silently.
-5. Send a user-visible alert only when repair fails repeatedly or the workflow must pause.
+5. Set `coordination.alert_needed: true` in state when repair is triggered. Do not send user messages directly.
+6. Exception: if `watchdog_tripped_count >= 3` and the coordinator has still not recovered, send one alert using the `⚠️` watchdog-repair template from `references/examples.md` §5, then set `coordination.alert_sent: true` to prevent duplicates.
+7. Otherwise, leave `coordination.alert_needed: true` for the next recovered coordinator cycle to report.
 
 Routing discipline:
-- Coordinator is the only authoritative sender of progress / pause / resume / completion updates.
-- Watchdog may trigger repair and may request/report through the coordinator model, but it must not emit user-visible internal routing text.
-- Subagent results are diagnostic inputs; they must be rewritten by the coordinator before any user-visible send.
+- The coordinator is the only authoritative sender of all user-visible messages.
+- The watchdog never sends user-visible messages directly, except as the single exception above.
+- Subagent and external-agent results are diagnostic inputs; the coordinator rewrites them before any user-visible send.
 
 ## Quota suspension integration
 
-Before expensive spawns or respawns, run the `claude-auto-resume` skill.
+Before expensive spawns or respawns that will use Claude-family models, verify quota directly from runtime-available provider metadata. Do not depend on external skill state.
 
-If it indicates suspension:
-1. Set `status: paused`.
-2. Record `resume.mode: quota-auto` and `resume.blocked_by: claude-quota`.
-3. Persist `resume.resume_at`.
-4. Add a resume coordinator wake for `resume.resume_at` or later.
+If suspended:
+1. Set `status: paused`, `resume.mode: quota-auto`, `resume.blocked_by: claude-quota`.
+2. Persist `resume.resume_at` from quota reset headers, or `now + 1h` as fallback.
+3. Persist all loop/branch context needed to continue: active loop id, current function, pending subagent session keys, any partial results. State must be self-sufficient for any future coordinator wake to resume.
+4. Add a resume coordinator wake at or after `resume.resume_at`.
 5. Keep the watchdog alive.
-6. Report the pause once.
+6. Report the pause using the `⏸️` Pause template.
 
 Resume sequence:
-1. Wake at `resume.resume_at`.
-2. Re-check quota.
-3. If clear, set `paused -> running`, clear the block, and continue.
-4. If still blocked, update `resume.resume_at`, reschedule, and report only if the expected resume time materially changed.
+1. Wake at `resume.resume_at`. Check `resume.blocked_by: claude-quota` in state.
+2. Re-verify quota directly.
+3. If clear: clear `resume.*`, transition `paused -> running`, report using the `▶️` Resume template, and continue from `active_loop_ids` and current functions.
+4. If still blocked: update `resume.resume_at`, reschedule, and report using the `⏸️` Pause template only if resume time materially changed.
 
 ## Terminal cleanup
 
-Cleanup is idempotent. Keep trying until state says it is complete.
+Cleanup is idempotent. Keep retrying until both `cleanup.wake_cleanup_complete` and `cleanup.terminal_report_sent` are true.
 
-Remove all known wake ids:
-- `current_wake_job_id`
-- `next_wake_job_id`
-- `watchdog_job_id`
-- every id in `cleanup_pending[]`
+Sequence:
+1. Move `current_wake_job_id` and `next_wake_job_id` into `cleanup_pending[]`. Persist.
+2. Remove each id in `cleanup_pending[]`, excluding `watchdog_job_id`. Persist after each removal. Retain failed ids in `cleanup_pending[]`.
+3. Set `cleanup.wake_cleanup_complete: true` and persist.
+4. Send the final report using the `✅` Final completion template from `references/examples.md` §5, if not already sent.
+5. Set `cleanup.terminal_report_sent: true` and persist.
+6. After both flags are true, remove `watchdog_job_id`. If removal fails, the watchdog detects `terminal_report_sent: true` on its next run and removes itself without alerting.
 
-Then:
-1. set `cleanup.wake_cleanup_complete: true`
-2. send the final report if not yet sent
-3. set `cleanup.terminal_report_sent: true`
-
-If any removal fails, leave the id in `cleanup_pending[]` and retry on the next watchdog or terminal wake.
+The watchdog remains active until both `cleanup.wake_cleanup_complete: true` and `cleanup.terminal_report_sent: true`.

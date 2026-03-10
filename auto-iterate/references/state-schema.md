@@ -13,6 +13,7 @@ workdir: <absolute path>
 current: <short human-readable current action>
 round: <int>
 loops_mode: sequential|parallel
+execution_mode: spawned-worker|existing-agent
 
 origin:
   session_kind: interactive-dm|interactive-group|isolated-cron
@@ -35,6 +36,8 @@ coordination:
   watchdog_job_id: <job id or null>
   cleanup_pending: []
   watchdog_tripped_count: <int>
+  alert_needed: <bool>
+  alert_sent: <bool>
   poll_streak: <int>
 
 loops:
@@ -92,11 +95,14 @@ cleanup:
 ## Field notes
 
 - `workflow_deadline_at` is fixed at init: `started_at + 3h`. Never reset it.
+- `execution_mode` records the selected orchestration mode for this workflow. Prefer `spawned-worker`; use `existing-agent` only when visibility and policy constraints are explicitly satisfied.
 - `coordination.state_version` increments on every successful write.
 - `coordination.writer_session` + `lease_expires_at` implement the single-writer lease.
 - `coordination.current_wake_job_id` is the live coordinator wake.
 - `coordination.next_wake_job_id` exists only during add-before-remove handoff.
 - `coordination.cleanup_pending[]` retains obsolete wake ids that still need removal.
+- `coordination.alert_needed` marks that the coordinator should emit a repair-related user-visible status message.
+- `coordination.alert_sent` prevents duplicate watchdog repair alerts when the watchdog must use the narrow direct-alert exception.
 - `loops[].branches[]` is required for parallel branches. Use stable branch ids.
 - `subagents[]` is append/update history for workers. Do not collapse to one field.
 - `resume.*` captures pauses caused by quota or explicit user-blocked states.
