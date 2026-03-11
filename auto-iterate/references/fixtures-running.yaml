@@ -1,0 +1,76 @@
+id: fixture-running
+task: Fix and verify one loop
+target: Tests pass and review criteria met
+status: running
+started_at: 2026-03-11T00:00:00Z
+workflow_deadline_at: 2026-03-11T03:00:00Z
+workdir: /tmp/project
+current: wait for developer completion
+round: 2
+loops_mode: sequential
+execution_mode: spawned-worker
+origin:
+  session_kind: interactive-dm
+  session_id: main
+  report_to:
+    channel: telegram
+    target: '123'
+    threadId: null
+  report_context_locked: true
+coordination:
+  state_version: 2
+  writer_session: main
+  lease_expires_at: 2026-03-11T00:02:00Z
+  pending_transition: advance
+  last_cycle_at: 2026-03-11T00:00:00Z
+  next_expected_wake_at: 2026-03-11T00:06:00Z
+  current_wake_job_id: job1
+  next_wake_job_id: null
+  watchdog_job_id: jobw
+  cleanup_pending: []
+  watchdog_tripped_count: 0
+  alert_needed: false
+  alert_sent: false
+  poll_streak: 1
+  poll_complexity: moderate
+loops:
+  - id: loop-a
+    parent: null
+    kind: single
+    status: running
+    round: 2
+    funcs: [dev, test]
+    current_func: dev
+    exit_condition: tests pass
+    merge_policy: null
+    branches: []
+subagents:
+  - child_session_key: agent:test
+    run_id: run-1
+    loop_id: loop-a
+    branch_id: null
+    status: running
+    started_at: 2026-03-11T00:00:00Z
+    timeout_at: 2026-03-11T01:00:00Z
+    last_checked_at: 2026-03-11T00:01:00Z
+    summary: developer is fixing the issue
+    criteria_assessment: not-met
+    next_action_hint: advance
+progress:
+  active_loop_ids: [loop-a]
+  last_subagent_result: developer is fixing the issue
+  last_failure_reason: null
+  completed_items: [dark mode]
+  in_progress_items: [rawData.some fix]
+  commit_refs: [abc1234]
+  test_summary: 12 passed
+  total_retry_count: 0
+  no_fix_rounds_total: 0
+resume:
+  mode: none
+  blocked_by: none
+  resume_at: null
+  note: null
+cleanup:
+  terminal_report_sent: false
+  wake_cleanup_complete: false

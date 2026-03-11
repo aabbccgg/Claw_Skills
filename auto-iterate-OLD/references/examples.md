@@ -1,6 +1,6 @@
 # Canonical examples
 
-## 1. Coordinator wake cron.add payload
+## 1. Coordinator wake add
 
 ```json
 {
@@ -12,7 +12,7 @@
     "payload": {
       "kind": "agentTurn",
       "timeoutSeconds": 300,
-      "message": "[auto-iterate] coordinator wake\nIteration: iter-20260310-130200\nRound: 3\nStatus: awaiting-review\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: refine-code\nCurrent branch: backend\nSubagents: [child:abc]\nCurrent wake id: job_123\nWorkflow deadline: 2026-03-10T08:02:00Z\nNext action: poll\nReport_to: {channel: telegram, target: \"-100123\", threadId: \"17\"}\n⚠️ RULES: ONE CYCLE->END. Use cron tool, not shell. Commit state before report. Heavy work stays in worker."
+      "message": "[auto-iterate] coordinator wake\nIteration: iter-20260310-130200\nRound: 3\nStatus: awaiting-review\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: refine-code\nCurrent branch: backend\nSubagents: [child:abc]\nCurrent wake id: job_123\nWorkflow deadline: 2026-03-10T08:02:00Z\nNext action: poll\nReport_to: {channel: telegram, target: \"-100123\", threadId: \"17\"}\n⚠️ RULES: ONE CYCLE->END. Use cron tool, not shell. Commit state before report. Heavy work stays in subagent."
     },
     "delivery": {"mode": "none"},
     "sessionTarget": "isolated"
@@ -20,7 +20,7 @@
 }
 ```
 
-## 2. Watchdog cron.add payload
+## 2. Watchdog wake add
 
 ```json
 {
@@ -35,12 +35,13 @@
       "message": "[auto-iterate] watchdog wake\nState path: /abs/path/STATE.md\nRole: watchdog\nRepair only. No heavy work. No user-task execution."
     },
     "delivery": {"mode": "none"},
-    "sessionTarget": "isolated"
+    "sessionTarget": "isolated",
+    "deleteAfterRun": false
   }
 }
 ```
 
-## 3. Worker brief
+## 3. Subagent spawn brief
 
 ```text
 Task: Execute one branch of the iteration.
@@ -59,36 +60,25 @@ Return YAML envelope:
 Do not edit orchestration state. Do not schedule cron.
 ```
 
-## 4. Script invocation examples
+## 4. Result envelope
 
-```bash
-# Validate state structure before commit or cleanup
-python3 scripts/validate_state.py /abs/path/STATE.md --json
-
-# Validate protocol invariants
-python3 scripts/validate_protocol.py /abs/path/STATE.md --json
-
-# Check transition validity
-python3 scripts/check_transition.py /abs/path/STATE.md --event result-ingested --to running --json
-
-# Evaluate loops and branch readiness
-python3 scripts/evaluate_progress.py /abs/path/STATE.md --json
-
-# Detect dead-loop / no-fix-rounds stalls
-python3 scripts/check_stall.py /abs/path/STATE.md --json
-
-# Compute next poll delay
-python3 scripts/compute_next_poll.py --complexity moderate --poll-streak 2
-
-# Render a user-visible status message
-python3 scripts/render_progress.py /abs/path/STATE.md --mode progress
+```yaml
+status: success
+summary: Fixed failing serializer tests and updated migration.
+artifacts:
+  - backend/app/serializers.py
+  - backend/tests/test_serializer.py
+criteria_assessment: not-met
+next_action_hint: advance
 ```
 
-## 5. User-visible report templates
+## 5. Progress report templates
 
-Routing rule: the coordinator sends these messages directly to `origin.report_to` via `message(action="send")`. User-visible text contains only user-meaningful content.
+Use this format for all user-visible progress messages. Adapt content to the current state; keep the structure.
 
-### Progress
+Routing rule: the coordinator sends these messages directly to `origin.report_to` via `message(action="send")`. User-visible text must contain only content meaningful to the user — no routing metadata.
+
+### During subagent execution (polling)
 
 ```text
 🔄 [auto-iterate] Round 3 | Loop: fix-rawdata-error (2:03 PM)
@@ -101,6 +91,33 @@ Next: wait for developer completion, then hand off to tester
 ⏰ Next check: 2:09 PM
 📊 Time remaining: ~1h45m (deadline 3:48 PM)
 ```
+
+### After subagent completion + advancing
+
+```text
+🔄 [auto-iterate] Round 2 (12:03 PM)
+
+Developer ✅ Completed and committed (ae9dca7)
+• Dashboard: gain/loss CSS classes, 3Y period, defaultPeriod
+• Watchlist: batch price fetch, price column, EmptyState, collapsed search panel
+• tsc ✅ | pytest 97 passed ✅
+
+Tester 🔄 R2 verification dispatched and running…
+
+⏰ Next check: 12:11 PM
+📊 Time remaining: ~2h15m (deadline 2:18 PM)
+```
+
+### Template fields (required)
+
+| Field | Source |
+|-------|--------|
+| Header | `🔄 [auto-iterate] Round {round}` + optional `Loop: {loop_id}` + `({HH:MM} local)` |
+| Actor lines | One per subagent/role. Use ✅ done, 🔄 running, ❌ failed, ⏸️ paused, ▶️ resumed, ⚠️ repair |
+| Bullet details | Commit hash, specific changes, test results — keep concise |
+| Next | The decided next action from DECIDE step |
+| ⏰ Next check | `next_expected_wake_at` in the user's local time |
+| 📊 Time remaining | `workflow_deadline_at - now`, with deadline time shown |
 
 ### Pause
 
@@ -128,7 +145,7 @@ Next: continue Round 4 development and verification
 📊 Time remaining: ~1h12m (deadline 5:28 PM)
 ```
 
-### Repair alert
+### Watchdog / repair alert
 
 ```text
 ⚠️ [auto-iterate] Round 3 | Loop: round3 (2:20 PM)
@@ -154,4 +171,22 @@ Completed 4 rounds and 6 branches successfully
 
 Cleanup: coordinator wake, watchdog, and 1 pending wake removed
 Total runtime: 2h40m
+```
+
+---
+
+## 6. Telegram routing examples
+
+These are internal routing objects for the coordinator to use with `message(action="send")`. They are **not** part of the user-visible message body.
+
+DM:
+
+```json
+{"channel":"telegram","target":"12345678"}
+```
+
+Group topic:
+
+```json
+{"channel":"telegram","target":"-1009876543210","threadId":"42"}
 ```

@@ -1,0 +1,55 @@
+id: fixture-paused
+task: Resume after quota
+target: Complete remaining loop
+status: paused
+started_at: 2026-03-11T00:00:00Z
+workflow_deadline_at: 2026-03-11T05:00:00Z
+workdir: /tmp/project
+current: waiting for quota reset
+round: 4
+loops_mode: sequential
+execution_mode: spawned-worker
+origin:
+  session_kind: interactive-dm
+  session_id: main
+  report_to:
+    channel: telegram
+    target: '123'
+    threadId: null
+  report_context_locked: true
+coordination:
+  state_version: 8
+  writer_session: main
+  lease_expires_at: 2026-03-11T01:02:00Z
+  pending_transition: pause
+  last_cycle_at: 2026-03-11T01:00:00Z
+  next_expected_wake_at: 2026-03-11T02:00:00Z
+  current_wake_job_id: job2
+  next_wake_job_id: null
+  watchdog_job_id: jobw
+  cleanup_pending: []
+  watchdog_tripped_count: 0
+  alert_needed: false
+  alert_sent: false
+  poll_streak: 0
+  poll_complexity: moderate
+loops: []
+subagents: []
+progress:
+  active_loop_ids: [loop-b]
+  last_subagent_result: waiting for quota reset
+  last_failure_reason: null
+  completed_items: [dashboard fixes, watchlist fixes]
+  in_progress_items: []
+  commit_refs: [abc1234, def5678]
+  test_summary: 97 passed
+  total_retry_count: 1
+  no_fix_rounds_total: 0
+resume:
+  mode: quota-auto
+  blocked_by: claude-quota
+  resume_at: 2026-03-11T02:00:00Z
+  note: provider reset pending
+cleanup:
+  terminal_report_sent: false
+  wake_cleanup_complete: false

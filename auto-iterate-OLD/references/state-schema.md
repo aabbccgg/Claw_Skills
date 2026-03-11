@@ -39,7 +39,6 @@ coordination:
   alert_needed: <bool>
   alert_sent: <bool>
   poll_streak: <int>
-  poll_complexity: trivial|simple|moderate|complex
 
 loops:
   - id: <loop id>
@@ -80,10 +79,6 @@ progress:
   active_loop_ids: []
   last_subagent_result: <short text or null>
   last_failure_reason: <text or null>
-  completed_items: []
-  in_progress_items: []
-  commit_refs: []
-  test_summary: <text or null>
   total_retry_count: <int>
   no_fix_rounds_total: <int>
 
@@ -101,17 +96,19 @@ cleanup:
 ## Field notes
 
 - `workflow_deadline_at` is fixed at init: `started_at + 3h`. Never reset it.
-- `execution_mode` records the selected orchestration mode. Prefer `spawned-worker`; use `existing-agent` only when visibility and policy constraints are explicitly satisfied.
+- `execution_mode` records the selected orchestration mode for this workflow. Prefer `spawned-worker`; use `existing-agent` only when visibility and policy constraints are explicitly satisfied.
+- `coordination.state_version` increments on every successful write.
 - `coordination.writer_session` + `lease_expires_at` implement the single-writer lease.
+- `coordination.current_wake_job_id` is the live coordinator wake.
 - `coordination.next_wake_job_id` exists only during add-before-remove handoff.
 - `coordination.cleanup_pending[]` retains obsolete wake ids that still need removal.
-- `coordination.poll_complexity` is the canonical polling complexity used by `scripts/compute_next_poll.py`.
-- `coordination.alert_needed` marks that the coordinator should emit a repair-related user-visible message.
-- `coordination.alert_needed` is cleared by the coordinator during PERSIST in the same cycle that emits the repair alert during REPORT.
-- `coordination.alert_sent` prevents duplicate watchdog repair alerts when the watchdog uses the narrow direct-alert exception.
-- `progress.active_loop_ids` is the canonical active-loop path used for resume.
-- `progress.last_failure_reason` stores the latest orchestration or worker-mode failure reason, including existing-agent fallback causes.
-- `progress.completed_items`, `progress.in_progress_items`, `progress.commit_refs`, and `progress.test_summary` are optional presentation fields consumed by `scripts/render_progress.py`.
+- `coordination.alert_needed` marks that the coordinator should emit a repair-related user-visible status message.
+- `coordination.alert_needed` is cleared by the coordinator during PERSIST in the same cycle that will emit the repair alert during REPORT.
+- `coordination.alert_sent` prevents duplicate watchdog repair alerts when the watchdog must use the narrow direct-alert exception.
+- `progress.last_failure_reason` stores the latest orchestration or worker-mode failure reason, including existing-agent mode fallback causes.
+- `loops[].branches[]` is required for parallel branches. Use stable branch ids.
+- `subagents[]` is append/update history for workers. Do not collapse to one field.
+- `resume.*` captures pauses caused by quota or explicit user-blocked states.
 - `cleanup.*` makes terminal reporting and wake removal idempotent.
 
 ## Write discipline
@@ -120,6 +117,13 @@ cleanup:
 2. Acquire or confirm the writer lease.
 3. Recompute the full next state.
 4. Increment `state_version`.
-5. Validate shape and invariants.
-6. Write the entire YAML block.
-7. Only then send user-visible reports.
+5. Write the entire YAML block.
+6. Only then send user-visible reports.
+
+## Minimal STATE.md wrapper
+
+~~~md
+```yaml
+<canonical state here>
+```
+~~~
