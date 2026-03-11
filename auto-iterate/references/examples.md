@@ -69,7 +69,7 @@ python3 scripts/validate_state.py /abs/path/STATE.md --json
 python3 scripts/validate_protocol.py /abs/path/STATE.md --json
 
 # Check transition validity
-python3 scripts/check_transition.py /abs/path/STATE.md --event result-ingested --to running --json
+python3 scripts/check_transition.py /abs/path/STATE.md --event worker-result --to running --json
 
 # Evaluate loops and branch readiness
 python3 scripts/evaluate_progress.py /abs/path/STATE.md --json

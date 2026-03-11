@@ -6,20 +6,37 @@ Allowed transitions:
 
 | From | Event | To |
 |---|---|---|
-| `running` | worker spawned and successor wake durably committed | `awaiting-review` |
-| `awaiting-review` | result ingested and next action chosen | `running` / `paused` / `complete` |
-| `running` | ambiguity / retry exhaustion / dead loop / deadline / quota suspension | `paused` |
-| `paused` | explicit user resume or quota-restored wake | `running` |
-| `running` | global completion criteria met and terminal cleanup committed | `complete` |
+| `running` | `worker-dispatched` | `awaiting-review` |
+| `awaiting-review` | `worker-result` | `running` / `paused` / `complete` |
+| `awaiting-review` | `worker-failed` | `running` / `paused` |
+| `awaiting-review` | `worker-timeout` | `running` / `paused` |
+| `running` | `pause-requested` / `dead-loop` / `quota-suspended` / `repair-failed` | `paused` |
+| `paused` | `user-resume` / `quota-restored` | `running` |
+| `running` | `complete-requested` | `complete` |
 
 Forbidden transitions:
 - `complete -> *`
 - `paused -> running` without an explicit resume event
-- `awaiting-review -> awaiting-review` after successful ingestion
+- `awaiting-review -> awaiting-review` after successful worker result ingestion
 - `running -> complete` before terminal cleanup path is prepared
 
+Canonical event vocabulary:
+- `worker-dispatched`
+- `worker-result`
+- `worker-failed`
+- `worker-timeout`
+- `pause-requested`
+- `dead-loop`
+- `quota-suspended`
+- `quota-restored`
+- `user-resume`
+- `complete-requested`
+- `repair-failed`
+
+Do not use ambiguous aliases such as `spawn`, `dispatch`, `worker-spawned`, or `result-ingested` in coordinator prompts or tooling.
+
 Coordinator rules:
-- After any successful worker ingestion, the same wake must choose exactly one next transition before END.
+- After any successful worker result ingestion, the same wake must choose exactly one next transition before END.
 - Existing-agent dispatch and existing-agent result ingestion are separate phases. Do not dispatch and synchronously wait for the final worker result in the same wake.
 
 ## Loop progression semantics

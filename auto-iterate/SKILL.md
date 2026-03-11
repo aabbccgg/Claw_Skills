@@ -103,7 +103,7 @@ Coordinator workflow:
 6. Ingest results.
 7. Run `scripts/evaluate_progress.py <state_path> --json` to determine actionable loops, branch readiness, and merge readiness.
 8. Run `scripts/check_stall.py <state_path> --json` to determine whether dead-loop or no-fix-rounds policy requires pause.
-9. Run `scripts/check_transition.py <state_path> --event <event> --to <status> --json` for every candidate non-terminal transition. Do not bypass this check.
+9. Run `scripts/check_transition.py <state_path> --event <canonical-event> --to <status> --json` for every candidate non-terminal transition. Do not bypass this check.
 10. Persist the full next state.
 11. Compute deterministic next-poll delay with `scripts/compute_next_poll.py --state-path <state_path>`.
 12. Schedule the successor wake if non-terminal.
@@ -113,7 +113,7 @@ Coordinator workflow:
 
 If the wake reached END without real progress and without a durable successor wake, treat the cycle as failed and rely on watchdog repair rather than emitting a long explanatory recap.
 
-Read `references/flow.md` for the explicit transition model, loop progression semantics, and dead-loop policy. Treat it as binding protocol, not optional guidance.
+Read `references/flow.md` for the explicit transition model, loop progression semantics, and dead-loop policy. Treat it as binding protocol, not optional guidance. Canonical transition events are: `worker-dispatched`, `worker-result`, `worker-failed`, `worker-timeout`, `pause-requested`, `dead-loop`, `quota-suspended`, `quota-restored`, `user-resume`, `complete-requested`, `repair-failed`.
 
 ## 7. Prefer spawned workers
 
@@ -134,9 +134,10 @@ Existing-agent mode is allowed only when all are true:
 
 Existing-agent dispatch contract:
 - Dispatch in one wake.
+- Validate `running --worker-dispatched--> awaiting-review`.
 - Immediately persist worker-dispatched state: `status=awaiting-review`, `subagents[].status=accepted`, `started_at`, and worker session metadata.
 - Schedule the successor wake and END.
-- In later wakes, ingest results only via `sessions_history`.
+- In later wakes, ingest results only via `sessions_history` and validate `awaiting-review --worker-result--> running|paused|complete`.
 - `sessions_send timeout` must not be interpreted as dispatch failure if the handoff was already queued.
 
 ## 8. Keep the watchdog alive until reporting is done

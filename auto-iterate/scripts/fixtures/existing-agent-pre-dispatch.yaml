@@ -1,0 +1,65 @@
+id: fixture-existing-agent-pre-dispatch
+task: Existing agent pre-dispatch state
+target: Dispatch should transition to awaiting-review
+status: running
+started_at: 2026-03-11T00:00:00Z
+workflow_deadline_at: 2026-03-11T23:00:00Z
+workdir: /tmp/project
+current: dispatch existing agent worker
+round: 1
+loops_mode: sequential
+execution_mode: existing-agent
+origin:
+  session_kind: interactive-dm
+  session_id: main
+  report_to:
+    channel: telegram
+    target: '123'
+    threadId: null
+  report_context_locked: true
+coordination:
+  state_version: 3
+  writer_session: main
+  lease_expires_at: 2026-03-11T00:02:00Z
+  pending_transition: spawn
+  last_cycle_at: 2026-03-11T00:00:00Z
+  next_expected_wake_at: 2026-03-11T00:06:00Z
+  current_wake_job_id: job-ed0
+  next_wake_job_id: null
+  watchdog_job_id: jobw
+  cleanup_pending: []
+  watchdog_tripped_count: 0
+  alert_needed: false
+  alert_sent: false
+  poll_streak: 0
+  poll_complexity: moderate
+loops:
+  - id: part1
+    parent: null
+    kind: single
+    status: running
+    round: 1
+    funcs: [developer-fix, tester-verify]
+    current_func: developer-fix
+    exit_condition: done
+    merge_policy: null
+    branches: []
+subagents: []
+progress:
+  active_loop_ids: [part1]
+  last_subagent_result: null
+  last_failure_reason: null
+  completed_items: []
+  in_progress_items: [developer-fix]
+  commit_refs: []
+  test_summary: null
+  total_retry_count: 0
+  no_fix_rounds_total: 0
+resume:
+  mode: none
+  blocked_by: none
+  resume_at: null
+  note: null
+cleanup:
+  terminal_report_sent: false
+  wake_cleanup_complete: false

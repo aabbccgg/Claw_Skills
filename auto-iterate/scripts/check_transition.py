@@ -6,9 +6,16 @@ import sys
 from pathlib import Path
 import yaml
 
+ALIAS_HINTS = {
+    'spawn': 'worker-dispatched',
+    'dispatch': 'worker-dispatched',
+    'worker-spawned': 'worker-dispatched',
+    'result-ingested': 'worker-result',
+}
+
 ALLOWED = {
     'running': {
-        'spawned': ['awaiting-review'],
+        'worker-dispatched': ['awaiting-review'],
         'pause-requested': ['paused'],
         'quota-suspended': ['paused'],
         'dead-loop': ['paused'],
@@ -16,7 +23,7 @@ ALLOWED = {
         'repair-failed': ['paused'],
     },
     'awaiting-review': {
-        'result-ingested': ['running', 'paused', 'complete'],
+        'worker-result': ['running', 'paused', 'complete'],
         'worker-timeout': ['running', 'paused'],
         'worker-failed': ['running', 'paused'],
     },
@@ -46,8 +53,8 @@ def invariant_errors(state, from_status, event, to_status):
         errors.append('complete is terminal; no outbound transition allowed')
     if from_status == 'paused' and to_status == 'running' and event not in {'user-resume', 'quota-restored'}:
         errors.append('paused -> running requires explicit resume event')
-    if from_status == 'awaiting-review' and event == 'result-ingested' and to_status == 'awaiting-review':
-        errors.append('awaiting-review must not remain awaiting-review after successful ingestion')
+    if from_status == 'awaiting-review' and event == 'worker-result' and to_status == 'awaiting-review':
+        errors.append('awaiting-review must not remain awaiting-review after successful worker result ingestion')
     if to_status == 'complete':
         if not cleanup.get('wake_cleanup_complete'):
             errors.append('transition to complete requires cleanup.wake_cleanup_complete=true in terminal path')
@@ -72,24 +79,32 @@ def main():
     args = ap.parse_args()
     state = load_state(Path(args.state_path).expanduser())
     from_status = state.get('status')
-    allowed_targets = ALLOWED.get(from_status, {}).get(args.event, [])
-    result = {'from': from_status, 'event': args.event, 'allowedTargets': allowed_targets, 'ok': True, 'errors': []}
-    if args.to_status:
-        result['to'] = args.to_status
-        if args.to_status not in allowed_targets:
-            result['ok'] = False
-            result['errors'].append(f'transition not allowed: {from_status} --{args.event}--> {args.to_status}')
-        result['errors'].extend(invariant_errors(state, from_status, args.event, args.to_status))
-        result['ok'] = result['ok'] and not result['errors']
+    result = {'from': from_status, 'event': args.event, 'ok': True, 'errors': []}
+
+    if args.event in ALIAS_HINTS:
+        result['ok'] = False
+        result['errors'].append(f"invalid event alias '{args.event}'; use '{ALIAS_HINTS[args.event]}'")
+        result['allowedTargets'] = []
+    else:
+        allowed_targets = ALLOWED.get(from_status, {}).get(args.event, [])
+        result['allowedTargets'] = allowed_targets
+        if args.to_status:
+            result['to'] = args.to_status
+            if args.to_status not in allowed_targets:
+                result['ok'] = False
+                result['errors'].append(f'transition not allowed: {from_status} --{args.event}--> {args.to_status}')
+            result['errors'].extend(invariant_errors(state, from_status, args.event, args.to_status))
+            result['ok'] = result['ok'] and not result['errors']
+
     if args.json:
         print(json.dumps(result, indent=2))
     else:
-        if args.to_status:
+        if args.to_status or result['errors']:
             print('OK' if result['ok'] else 'INVALID')
             for e in result['errors']:
                 print(f'- {e}')
         else:
-            print(' '.join(allowed_targets))
+            print(' '.join(result.get('allowedTargets', [])))
     sys.exit(0 if result['ok'] else 1)
 
 
