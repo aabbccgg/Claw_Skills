@@ -84,6 +84,7 @@ progress:
   in_progress_items: []
   commit_refs: []
   test_summary: <text or null>
+  pending_reports: []   # optional queue of owed progress/milestone reports
   total_retry_count: <int>
   no_fix_rounds_total: <int>
 
@@ -113,6 +114,7 @@ cleanup:
 - `progress.last_failure_reason` stores the latest orchestration or worker-mode failure reason, including existing-agent fallback causes.
 - Existing-agent enqueue success must move the workflow to `awaiting-review` with a `subagents[]` record in `accepted` or `running` state; lack of same-wake final result is not itself a failure.
 - `progress.completed_items`, `progress.in_progress_items`, `progress.commit_refs`, and `progress.test_summary` are optional presentation fields consumed by `scripts/render_progress.py`.
+- `progress.pending_reports` is an optional queue of owed user-visible reports (especially milestone updates). Each item should use `{type, key, summary}` so the coordinator can render it and then clear it after successful delivery.
 - `cleanup.*` makes terminal reporting and wake removal idempotent.
 
 ## Write discipline

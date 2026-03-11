@@ -18,7 +18,8 @@ Run in this order on every isolated coordinator wake:
 10. Persist full state.
 11. Schedule successor wake if still non-terminal.
 12. Remove old wake ids only after the replacement wake is durable.
-13. Report from committed state.
+13. Report from committed state. If `progress.pending_reports` contains a queued milestone or repair update, emit that first.
+14. If a queued pending report was delivered successfully, persist queue cleanup before END.
 
 ## Broken wake chain repair
 

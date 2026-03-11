@@ -121,9 +121,9 @@ def loop_action(loop, state):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('state_path')
-    ap.add_argument('--json', action='store_true')
+    ap = argparse.ArgumentParser(description='Evaluate actionable loops, branch readiness, merge readiness, and branch conflicts from STATE.md.')
+    ap.add_argument('state_path', help='Path to STATE.md (fenced YAML or raw YAML).')
+    ap.add_argument('--json', action='store_true', help='Emit machine-readable JSON result.')
     args = ap.parse_args()
     state = load_state(Path(args.state_path).expanduser())
     loops = state.get('loops') or []

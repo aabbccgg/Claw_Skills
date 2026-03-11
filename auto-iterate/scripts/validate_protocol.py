@@ -18,9 +18,9 @@ def load_state(path: Path):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('state_path')
-    ap.add_argument('--json', action='store_true')
+    ap = argparse.ArgumentParser(description='Validate auto-iterate protocol invariants beyond raw schema shape.')
+    ap.add_argument('state_path', help='Path to STATE.md (fenced YAML or raw YAML).')
+    ap.add_argument('--json', action='store_true', help='Emit machine-readable JSON result.')
     args = ap.parse_args()
     state = load_state(Path(args.state_path).expanduser())
     errors, warnings = [], []
@@ -29,13 +29,15 @@ def main():
     progress = state.get('progress', {}) or {}
     coord = state.get('coordination', {}) or {}
     cleanup = state.get('cleanup', {}) or {}
+    pending_reports = progress.get('pending_reports') or []
     resume = state.get('resume', {}) or {}
     loops = state.get('loops', []) or []
     subs = state.get('subagents', []) or []
     active_workers = [s for s in subs if s.get('status') in ACTIVE]
+    completed_or_terminal_workers = [s for s in subs if s.get('status') in {'success', 'no-change', 'blocked', 'failed', 'timed-out', 'stalled'}]
 
-    if status == 'awaiting-review' and not active_workers:
-        errors.append('awaiting-review requires at least one active worker')
+    if status == 'awaiting-review' and not active_workers and not completed_or_terminal_workers:
+        errors.append('awaiting-review requires an active worker or a completed worker result pending ingestion')
     if status == 'complete' and active_workers:
         errors.append('complete must not have active workers')
     if status == 'complete' and not cleanup.get('wake_cleanup_complete'):
@@ -53,6 +55,9 @@ def main():
         warnings.append('paused state has no resume metadata')
     if cleanup.get('wake_cleanup_complete') and not cleanup.get('terminal_report_sent') and not coord.get('watchdog_job_id'):
         errors.append('final report retry path requires watchdog while terminal_report_sent=false')
+    keys = [item.get('key') for item in pending_reports if isinstance(item, dict) and item.get('key')]
+    if len(keys) != len(set(keys)):
+        warnings.append('progress.pending_reports contains duplicate report keys')
 
     # Detect no-dispatch/no-reschedule style failed cycles.
     if status == 'running' and not active_workers and coord.get('pending_transition') == 'idle' and (progress.get('in_progress_items') or []):

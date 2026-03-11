@@ -24,9 +24,9 @@ def err(errors, msg):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("state_path")
-    ap.add_argument("--json", action="store_true")
+    ap = argparse.ArgumentParser(description='Validate auto-iterate STATE.md structure and required fields.')
+    ap.add_argument("state_path", help='Path to STATE.md (fenced YAML or raw YAML).')
+    ap.add_argument("--json", action="store_true", help='Emit machine-readable JSON result.')
     args = ap.parse_args()
 
     path = Path(args.state_path).expanduser()
@@ -70,6 +70,17 @@ def main():
     for key in ["active_loop_ids", "completed_items", "in_progress_items", "commit_refs"]:
         if not isinstance(progress.get(key, []), list):
             err(errors, f"progress.{key} must be a list")
+    if 'pending_reports' in progress:
+        if not isinstance(progress.get('pending_reports'), list):
+            err(errors, 'progress.pending_reports must be a list when present')
+        else:
+            for i, item in enumerate(progress.get('pending_reports', [])):
+                if not isinstance(item, dict):
+                    err(errors, f'progress.pending_reports[{i}] must be an object')
+                    continue
+                for req in ['type', 'key']:
+                    if req not in item:
+                        err(errors, f'progress.pending_reports[{i}] missing: {req}')
 
     resume = data.get("resume", {})
     if resume.get("mode") not in RESUME_MODE:

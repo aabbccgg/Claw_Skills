@@ -14,10 +14,10 @@ def load_state(path: Path):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('state_path')
-    ap.add_argument('--threshold', type=int, default=3)
-    ap.add_argument('--json', action='store_true')
+    ap = argparse.ArgumentParser(description='Detect dead-loop / repeated no-fix conditions from STATE.md.')
+    ap.add_argument('state_path', help='Path to STATE.md (fenced YAML or raw YAML).')
+    ap.add_argument('--threshold', type=int, default=3, help='No-fix threshold at which stall should trigger pause recommendation.')
+    ap.add_argument('--json', action='store_true', help='Emit machine-readable JSON result.')
     args = ap.parse_args()
 
     state = load_state(Path(args.state_path).expanduser())

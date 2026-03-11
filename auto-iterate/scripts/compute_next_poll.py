@@ -40,11 +40,11 @@ def compute(complexity, poll_streak):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--complexity', choices=sorted(BASE))
-    ap.add_argument('--poll-streak', type=int)
-    ap.add_argument('--state-path')
-    ap.add_argument('--json', action='store_true')
+    ap = argparse.ArgumentParser(description='Compute deterministic next-poll delay for auto-iterate coordinator wakes.')
+    ap.add_argument('--complexity', choices=sorted(BASE), help='Polling complexity when not reading from STATE.md.')
+    ap.add_argument('--poll-streak', type=int, help='Polling streak when not reading from STATE.md.')
+    ap.add_argument('--state-path', help='Path to STATE.md; if provided, read coordination.poll_complexity and coordination.poll_streak from state.')
+    ap.add_argument('--json', action='store_true', help='Emit machine-readable JSON result.')
     args = ap.parse_args()
 
     complexity = args.complexity

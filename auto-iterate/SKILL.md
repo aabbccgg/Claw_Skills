@@ -70,7 +70,7 @@ Use `scripts/validate_state.py <state_path>` when state may be inconsistent, aft
 
 Persist `origin.report_to` on init and never rewrite it.
 
-The coordinator sends progress, pause, resume, repair, and completion messages directly to `origin.report_to` via `message(action="send")`.
+The coordinator sends progress, milestone, pause, resume, repair, and completion messages directly to `origin.report_to` via `message(action="send")`.
 
 Do not let workers, existing agents, or watchdog send user-visible progress directly, except for the narrow watchdog emergency exception defined in `references/recovery.md`.
 
@@ -104,12 +104,13 @@ Coordinator workflow:
 7. Run `scripts/evaluate_progress.py <state_path> --json` to determine actionable loops, branch readiness, and merge readiness.
 8. Run `scripts/check_stall.py <state_path> --json` to determine whether dead-loop or no-fix-rounds policy requires pause.
 9. Run `scripts/check_transition.py <state_path> --event <canonical-event> --to <status> --json` for every candidate non-terminal transition. Do not bypass this check.
-10. Persist the full next state.
+10. Persist the full next state. When a loop completes or the workflow advances to a new loop, optionally append a milestone item to `progress.pending_reports`.
 11. Compute deterministic next-poll delay with `scripts/compute_next_poll.py --state-path <state_path>`.
 12. Schedule the successor wake if non-terminal.
-13. Render the correct report text with `scripts/render_progress.py <state_path> --mode <progress|pause|resume|repair|final>`.
+13. Render the correct report text with `scripts/render_progress.py <state_path> --mode <progress|pause|resume|repair|final>`. If `progress.pending_reports` is non-empty, prefer the oldest queued milestone/progress item over a generic progress report.
 14. Send one short user-visible report from committed state.
-15. End immediately.
+15. If a queued pending report was successfully delivered, persist queue cleanup before END. This is the only allowed post-report cleanup persist.
+16. End immediately.
 
 If the wake reached END without real progress and without a durable successor wake, treat the cycle as failed and rely on watchdog repair rather than emitting a long explanatory recap.
 
@@ -189,6 +190,7 @@ Read these references as needed:
 - `references/flow.md` — explicit state machine, loop progression, and dead-loop policy.
 - `references/recovery.md` — wake repair, alert lifecycle, quota pause/resume, terminal cleanup.
 - `references/examples.md` — cron payload examples, worker briefs, report templates, and script examples.
+- `references/script-interfaces.md` — short invocation contracts for the orchestration scripts; prefer this over reading full script source when you only need args/output semantics.
 
 Use these scripts when helpful:
 - `scripts/validate_state.py` — validate `STATE.md` structure and required fields.

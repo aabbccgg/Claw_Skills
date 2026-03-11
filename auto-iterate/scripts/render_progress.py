@@ -124,7 +124,15 @@ def extend_items(lines, label, items, limit=4):
 
 def render_progress(state, now):
     progress = state.get('progress', {}) or {}
+    pending_reports = progress.get('pending_reports') or []
     lines = [header('🔄', state, now), '']
+    if pending_reports:
+        item = pending_reports[0]
+        if isinstance(item, dict):
+            kind = item.get('type', 'milestone')
+            summary = item.get('summary') or item.get('key')
+            lines.append(f"Milestone ({kind}): {summary}")
+            lines.append('')
     lines.extend(worker_lines(state))
     extend_items(lines, 'Completed', progress.get('completed_items') or [])
     extend_items(lines, 'In progress', progress.get('in_progress_items') or [])
@@ -201,9 +209,9 @@ def render_final(state, now):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('state_path')
-    ap.add_argument('--mode', choices=['progress', 'pause', 'resume', 'repair', 'final'])
+    ap = argparse.ArgumentParser(description='Render user-visible auto-iterate progress text from committed STATE.md.')
+    ap.add_argument('state_path', help='Path to STATE.md (fenced YAML or raw YAML).')
+    ap.add_argument('--mode', choices=['progress', 'pause', 'resume', 'repair', 'final'], help='Optional explicit render mode; default is inferred from state.')
     args = ap.parse_args()
     state = load_yaml(Path(args.state_path).expanduser())
     now = datetime.now(timezone.utc)

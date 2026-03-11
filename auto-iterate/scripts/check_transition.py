@@ -71,11 +71,11 @@ def invariant_errors(state, from_status, event, to_status):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument('state_path')
-    ap.add_argument('--event', required=True)
-    ap.add_argument('--to', dest='to_status')
-    ap.add_argument('--json', action='store_true')
+    ap = argparse.ArgumentParser(description='Validate a candidate auto-iterate state transition using canonical event vocabulary.')
+    ap.add_argument('state_path', help='Path to STATE.md (fenced YAML or raw YAML).')
+    ap.add_argument('--event', required=True, help='Canonical transition event (for example: worker-dispatched, worker-result, dead-loop).')
+    ap.add_argument('--to', dest='to_status', help='Candidate target status to validate.')
+    ap.add_argument('--json', action='store_true', help='Emit machine-readable JSON result.')
     args = ap.parse_args()
     state = load_state(Path(args.state_path).expanduser())
     from_status = state.get('status')
