@@ -51,6 +51,11 @@ Suggested handling:
 - `running`: keep polling
 - `failed` / `timed-out` / `stalled`: increment retry counters for the owning loop or branch
 
+Existing-agent note:
+- A `sessions_send(..., timeoutSeconds=0)` enqueue is dispatch success, not worker completion.
+- A missing final result in the same wake is normal; persist `awaiting-review` and poll later.
+- Do not rewrite state to `dispatch failed` unless the enqueue itself failed.
+
 Pause if retries are exhausted for the active branch or loop.
 
 ## Watchdog policy

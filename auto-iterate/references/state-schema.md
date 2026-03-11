@@ -111,6 +111,7 @@ cleanup:
 - `coordination.alert_sent` prevents duplicate watchdog repair alerts when the watchdog uses the narrow direct-alert exception.
 - `progress.active_loop_ids` is the canonical active-loop path used for resume.
 - `progress.last_failure_reason` stores the latest orchestration or worker-mode failure reason, including existing-agent fallback causes.
+- Existing-agent enqueue success must move the workflow to `awaiting-review` with a `subagents[]` record in `accepted` or `running` state; lack of same-wake final result is not itself a failure.
 - `progress.completed_items`, `progress.in_progress_items`, `progress.commit_refs`, and `progress.test_summary` are optional presentation fields consumed by `scripts/render_progress.py`.
 - `cleanup.*` makes terminal reporting and wake removal idempotent.
 

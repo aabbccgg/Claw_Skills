@@ -58,6 +58,16 @@ def main():
     if status == 'running' and not active_workers and coord.get('pending_transition') == 'idle' and (progress.get('in_progress_items') or []):
         errors.append('running state with in-progress items requires active worker or non-idle transition')
 
+    # Existing-agent dispatch must transition to awaiting-review after enqueue.
+    if state.get('execution_mode') == 'existing-agent':
+        if active_workers and status != 'awaiting-review':
+            errors.append('existing-agent dispatch with accepted/running worker must use status=awaiting-review')
+        lfr = (progress.get('last_failure_reason') or '').lower()
+        if active_workers and 'dispatch failed' in lfr:
+            errors.append('dispatch failure is misclassified: existing-agent worker already accepted/running')
+        if active_workers and 'retry dispatch' in (state.get('current') or '').lower():
+            errors.append('redundant redispatch detected while existing-agent worker is already accepted/running')
+
     # Repair verification completeness.
     if coord.get('alert_needed'):
         if not coord.get('current_wake_job_id'):

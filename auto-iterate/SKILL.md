@@ -130,7 +130,14 @@ Existing-agent mode is allowed only when all are true:
 - The target can be instructed not to send direct user-facing progress.
 - The target can be instructed to minimize reply-back ping-pong and suppress direct announce behavior.
 
-`sessions_send` is not a silent RPC primitive. It may trigger reply-back ping-pong and a target-side announce step. If that behavior is noisy or uncontrollable, persist the failure reason and fall back to spawned-worker mode.
+`sessions_send` is not a silent RPC primitive. It may trigger reply-back ping-pong and a target-side announce step. Use it as an enqueue operation only: `sessions_send(..., timeoutSeconds=0)`. Do not use same-wake synchronous waiting as the normal control path.
+
+Existing-agent dispatch contract:
+- Dispatch in one wake.
+- Immediately persist worker-dispatched state: `status=awaiting-review`, `subagents[].status=accepted`, `started_at`, and worker session metadata.
+- Schedule the successor wake and END.
+- In later wakes, ingest results only via `sessions_history`.
+- `sessions_send timeout` must not be interpreted as dispatch failure if the handoff was already queued.
 
 ## 8. Keep the watchdog alive until reporting is done
 

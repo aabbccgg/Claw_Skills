@@ -25,6 +25,10 @@ FIXTURES = [
     ROOT / 'scripts' / 'fixtures' / 'watchdog-direct-alert.yaml',
     ROOT / 'scripts' / 'fixtures' / 'no-dispatch-no-reschedule.yaml',
     ROOT / 'scripts' / 'fixtures' / 'repair-verification-incomplete.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'existing-agent-dispatch-accepted.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'existing-agent-dispatch-timeout-misclassified.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'existing-agent-result-ready.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'existing-agent-redundant-redispatch.yaml',
 ]
 
 
@@ -43,6 +47,8 @@ EXPECTED_FAILURES = {
     ('broken-wake-backlog.yaml', 'validate_protocol.py'),
     ('no-dispatch-no-reschedule.yaml', 'validate_protocol.py'),
     ('repair-verification-incomplete.yaml', 'validate_protocol.py'),
+    ('existing-agent-dispatch-timeout-misclassified.yaml', 'validate_protocol.py'),
+    ('existing-agent-redundant-redispatch.yaml', 'validate_protocol.py'),
 }
 
 

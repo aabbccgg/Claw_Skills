@@ -18,8 +18,9 @@ Forbidden transitions:
 - `awaiting-review -> awaiting-review` after successful ingestion
 - `running -> complete` before terminal cleanup path is prepared
 
-Coordinator rule:
+Coordinator rules:
 - After any successful worker ingestion, the same wake must choose exactly one next transition before END.
+- Existing-agent dispatch and existing-agent result ingestion are separate phases. Do not dispatch and synchronously wait for the final worker result in the same wake.
 
 ## Loop progression semantics
 
