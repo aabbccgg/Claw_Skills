@@ -29,6 +29,8 @@ FIXTURES = [
     ROOT / 'scripts' / 'fixtures' / 'existing-agent-dispatch-timeout-misclassified.yaml',
     ROOT / 'scripts' / 'fixtures' / 'existing-agent-result-ready.yaml',
     ROOT / 'scripts' / 'fixtures' / 'existing-agent-redundant-redispatch.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'milestone-pending-report.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'repair-pending-report.yaml',
 ]
 
 
@@ -40,6 +42,7 @@ MODE_OVERRIDES = {
     'quota-resumed.yaml': 'resume',
     'watchdog-repair.yaml': 'repair',
     'watchdog-direct-alert.yaml': 'repair',
+    'repair-pending-report.yaml': 'repair',
 }
 
 EXPECTED_FAILURES = {
