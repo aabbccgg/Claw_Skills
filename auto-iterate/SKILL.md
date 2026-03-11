@@ -89,8 +89,10 @@ Core rules:
 - Keep `workflow_deadline_at = started_at + 3h` fixed.
 - Delegate heavy execution to workers.
 - Make every wake message self-contained.
+- Use `payload.timeoutSeconds = 600` for coordinator and watchdog isolated cron jobs unless a clearly simpler job justifies less.
 - In isolated coordinator wakes, do not spend the cycle on long narrative recap, broad re-planning, or user-facing explanation before dispatch/poll/persist/schedule.
 - A non-terminal coordinator cycle is invalid if it ends without at least one concrete progress action: dispatching a worker, ingesting worker output, persisting a transition, or durably scheduling the successor wake.
+- Long business work belongs in workers, not in the coordinator or watchdog.
 
 Coordinator workflow:
 1. Read `STATE.md`.
