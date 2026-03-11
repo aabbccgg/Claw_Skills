@@ -86,7 +86,6 @@ Core rules:
 - Lease TTL is 120 seconds.
 - Commit state before report.
 - Add successor wake before removing superseded wake.
-- Keep `workflow_deadline_at = started_at + 3h` fixed.
 - Delegate heavy execution to workers.
 - Make every wake message self-contained.
 - Use `payload.timeoutSeconds = 600` for coordinator and watchdog isolated cron jobs unless a clearly simpler job justifies less.

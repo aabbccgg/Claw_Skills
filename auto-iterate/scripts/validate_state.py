@@ -34,7 +34,7 @@ def main():
     errors = []
     warnings = []
 
-    for key in ["id", "task", "target", "status", "started_at", "workflow_deadline_at", "workdir", "round", "loops_mode", "execution_mode", "origin", "coordination", "subagents", "progress", "resume", "cleanup"]:
+    for key in ["id", "task", "target", "status", "started_at", "workdir", "round", "loops_mode", "execution_mode", "origin", "coordination", "subagents", "progress", "resume", "cleanup"]:
         if key not in data:
             err(errors, f"missing top-level field: {key}")
 

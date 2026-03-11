@@ -3,7 +3,6 @@ task: Existing agent redundant redispatch
 target: Validator should reject redispatch while awaiting-review
 status: running
 started_at: 2026-03-11T00:00:00Z
-workflow_deadline_at: 2026-03-11T23:00:00Z
 workdir: /tmp/project
 current: retry dispatch despite accepted worker
 round: 1

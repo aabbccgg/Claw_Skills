@@ -3,7 +3,6 @@ task: Complete iteration
 target: All loops complete
 status: complete
 started_at: 2026-03-11T00:00:00Z
-workflow_deadline_at: 2026-03-11T03:00:00Z
 workdir: /tmp/project
 current: final-report
 round: 4

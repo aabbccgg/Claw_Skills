@@ -3,7 +3,6 @@ task: Watchdog direct alert exception
 target: Watchdog may send one direct repair alert
 status: running
 started_at: 2026-03-11T00:00:00Z
-workflow_deadline_at: 2026-03-11T23:00:00Z
 workdir: /tmp/project
 current: recover after repeated watchdog trips
 round: 4

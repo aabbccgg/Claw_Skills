@@ -3,7 +3,6 @@ task: Nested loop review
 target: Child loop completes before parent advances
 status: running
 started_at: 2026-03-11T00:00:00Z
-workflow_deadline_at: 2026-03-11T05:00:00Z
 workdir: /tmp/project
 current: child-loop
 round: 3

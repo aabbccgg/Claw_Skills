@@ -3,7 +3,6 @@ task: Parallel branch work
 target: Merge after branches satisfy policy
 status: running
 started_at: 2026-03-11T00:00:00Z
-workflow_deadline_at: 2026-03-11T05:00:00Z
 workdir: /tmp/project
 current: branch-a
 round: 2

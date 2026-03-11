@@ -3,7 +3,6 @@ task: Resume after quota
 target: Complete remaining loop
 status: paused
 started_at: 2026-03-11T00:00:00Z
-workflow_deadline_at: 2026-03-11T05:00:00Z
 workdir: /tmp/project
 current: waiting for quota reset
 round: 4

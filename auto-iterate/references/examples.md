@@ -12,7 +12,7 @@
     "payload": {
       "kind": "agentTurn",
       "timeoutSeconds": 600,
-      "message": "[auto-iterate] coordinator wake\nIteration: iter-20260310-130200\nRound: 3\nStatus: awaiting-review\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: refine-code\nCurrent branch: backend\nSubagents: [child:abc]\nCurrent wake id: job_123\nWorkflow deadline: 2026-03-10T08:02:00Z\nNext action: poll\nReport_to: {channel: telegram, target: \"-100123\", threadId: \"17\"}\n⚠️ RULES: ONE CYCLE->END. Use cron tool, not shell. Commit state before report. Heavy work stays in worker."
+      "message": "[auto-iterate] coordinator wake\nIteration: iter-20260310-130200\nRound: 3\nStatus: awaiting-review\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: refine-code\nCurrent branch: backend\nSubagents: [child:abc]\nCurrent wake id: job_123\nNext action: poll\nReport_to: {channel: telegram, target: \"-100123\", threadId: \"17\"}\n⚠️ RULES: ONE CYCLE->END. Use cron tool, not shell. Commit state before report. Heavy work stays in worker."
     },
     "delivery": {"mode": "none"},
     "sessionTarget": "isolated"
@@ -99,7 +99,6 @@ Developer 🔄 Working on the fix
 
 Next: wait for developer completion, then hand off to tester
 ⏰ Next check: 2:09 PM
-📊 Time remaining: ~1h45m (deadline 3:48 PM)
 ```
 
 ### Pause
@@ -111,7 +110,7 @@ Reason: Claude quota suspension
 Expected resume: 4:15 PM (quota reset + 90s)
 Current progress: 3/5 loops done, backend branch waiting to continue
 
-📊 Time remaining: ~18m (deadline 3:48 PM)
+Status window: paused until explicit resume or quota recovery
 ```
 
 ### Resume
@@ -125,7 +124,6 @@ Current progress: backend branch resumed, preparing tester verification
 
 Next: continue Round 4 development and verification
 ⏰ Next check: 4:24 PM
-📊 Time remaining: ~1h12m (deadline 5:28 PM)
 ```
 
 ### Repair alert
@@ -139,7 +137,6 @@ Impact: iteration state was preserved and will continue from the latest committe
 
 Next: wait for the new coordinator wake to resume polling
 ⏰ Next check: 2:28 PM
-📊 Time remaining: ~1h58m (deadline 4:18 PM)
 ```
 
 ### Final completion

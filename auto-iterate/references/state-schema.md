@@ -8,7 +8,6 @@ task: <short user task summary>
 target: <explicit global completion criteria>
 status: running|awaiting-review|paused|complete
 started_at: <ISO8601>
-workflow_deadline_at: <ISO8601>
 workdir: <absolute path>
 current: <short human-readable current action>
 round: <int>
@@ -101,7 +100,6 @@ cleanup:
 
 ## Field notes
 
-- `workflow_deadline_at` is fixed at init: `started_at + 3h`. Never reset it.
 - `execution_mode` records the selected orchestration mode. Prefer `spawned-worker`; use `existing-agent` only when visibility and policy constraints are explicitly satisfied.
 - `coordination.writer_session` + `lease_expires_at` implement the single-writer lease.
 - `coordination.next_wake_job_id` exists only during add-before-remove handoff.

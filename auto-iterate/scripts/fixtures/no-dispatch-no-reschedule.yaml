@@ -3,7 +3,6 @@ task: Invalid running cycle with no real progress
 target: Validator should reject no-progress running state
 status: running
 started_at: 2026-03-11T00:00:00Z
-workflow_deadline_at: 2026-03-11T23:00:00Z
 workdir: /tmp/project
 current: explanatory recap only
 round: 1

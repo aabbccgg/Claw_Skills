@@ -20,7 +20,6 @@ FIXTURES = [
     ROOT / 'scripts' / 'fixtures' / 'branch-worker-conflict.yaml',
     ROOT / 'scripts' / 'fixtures' / 'custom-user-criterion.yaml',
     ROOT / 'scripts' / 'fixtures' / 'broken-wake-backlog.yaml',
-    ROOT / 'scripts' / 'fixtures' / 'deadline-exceeded.yaml',
     ROOT / 'scripts' / 'fixtures' / 'quota-resumed.yaml',
     ROOT / 'scripts' / 'fixtures' / 'watchdog-direct-alert.yaml',
     ROOT / 'scripts' / 'fixtures' / 'no-dispatch-no-reschedule.yaml',

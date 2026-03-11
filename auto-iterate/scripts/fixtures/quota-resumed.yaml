@@ -3,7 +3,6 @@ task: Resume after quota restored
 target: Continue after quota reset
 status: running
 started_at: 2026-03-11T00:00:00Z
-workflow_deadline_at: 2026-03-11T23:00:00Z
 workdir: /tmp/project
 current: continue branch after quota restore
 round: 4

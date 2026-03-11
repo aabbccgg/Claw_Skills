@@ -115,14 +115,10 @@ def header(icon, state, now):
 
 def footer(state, now):
     coord = state.get('coordination', {}) or {}
-    deadline = parse_dt(state.get('workflow_deadline_at'))
     next_check = parse_dt(coord.get('next_expected_wake_at'))
     out = []
     if next_check:
         out.append(f"⏰ Next check: {fmt_local(next_check)}")
-    rem = human_delta(now, deadline)
-    if rem and deadline:
-        out.append(f"📊 Time remaining: {rem} (deadline {fmt_local(deadline)})")
     return out
 
 
