@@ -1,0 +1,76 @@
+id: fixture-existing-agent
+task: Existing agent orchestration
+target: Existing agent returns review result
+status: awaiting-review
+started_at: 2026-03-11T00:00:00Z
+workflow_deadline_at: 2026-03-11T05:00:00Z
+workdir: /tmp/project
+current: wait for existing agent
+round: 1
+loops_mode: sequential
+execution_mode: existing-agent
+origin:
+  session_kind: interactive-dm
+  session_id: main
+  report_to:
+    channel: telegram
+    target: '123'
+    threadId: null
+  report_context_locked: true
+coordination:
+  state_version: 3
+  writer_session: main
+  lease_expires_at: 2026-03-11T00:02:00Z
+  pending_transition: spawn
+  last_cycle_at: 2026-03-11T00:00:00Z
+  next_expected_wake_at: 2026-03-11T00:06:00Z
+  current_wake_job_id: job-e1
+  next_wake_job_id: null
+  watchdog_job_id: jobw
+  cleanup_pending: []
+  watchdog_tripped_count: 0
+  alert_needed: false
+  alert_sent: false
+  poll_streak: 0
+  poll_complexity: moderate
+loops:
+  - id: loop-existing
+    parent: null
+    kind: single
+    status: running
+    round: 1
+    funcs: [review]
+    current_func: review
+    exit_condition: review returned
+    merge_policy: null
+    branches: []
+subagents:
+  - child_session_key: agent:reviewer:telegram:group:-100:topic:1
+    run_id: null
+    loop_id: loop-existing
+    branch_id: null
+    status: running
+    started_at: 2026-03-11T00:00:00Z
+    timeout_at: 2026-03-11T01:00:00Z
+    last_checked_at: 2026-03-11T00:01:00Z
+    summary: existing agent is reviewing
+    criteria_assessment: unclear
+    next_action_hint: advance
+progress:
+  active_loop_ids: [loop-existing]
+  last_subagent_result: existing agent is reviewing
+  last_failure_reason: null
+  completed_items: []
+  in_progress_items: [review]
+  commit_refs: []
+  test_summary: null
+  total_retry_count: 0
+  no_fix_rounds_total: 0
+resume:
+  mode: none
+  blocked_by: none
+  resume_at: null
+  note: null
+cleanup:
+  terminal_report_sent: false
+  wake_cleanup_complete: false

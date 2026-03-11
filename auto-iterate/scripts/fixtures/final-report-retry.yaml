@@ -1,0 +1,65 @@
+id: fixture-final-report-retry
+task: Final report retry path
+target: Report once cleanup already completed
+status: complete
+started_at: 2026-03-11T00:00:00Z
+workflow_deadline_at: 2026-03-11T03:00:00Z
+workdir: /tmp/project
+current: final-report-retry
+round: 4
+loops_mode: sequential
+execution_mode: spawned-worker
+origin:
+  session_kind: interactive-dm
+  session_id: main
+  report_to:
+    channel: telegram
+    target: '123'
+    threadId: null
+  report_context_locked: true
+coordination:
+  state_version: 11
+  writer_session: main
+  lease_expires_at: 2026-03-11T03:02:00Z
+  pending_transition: complete
+  last_cycle_at: 2026-03-11T03:00:00Z
+  next_expected_wake_at: null
+  current_wake_job_id: null
+  next_wake_job_id: null
+  watchdog_job_id: jobw
+  cleanup_pending: []
+  watchdog_tripped_count: 0
+  alert_needed: false
+  alert_sent: false
+  poll_streak: 0
+  poll_complexity: moderate
+loops:
+  - id: loop-final
+    parent: null
+    kind: single
+    status: complete
+    round: 4
+    funcs: [dev, test]
+    current_func: null
+    exit_condition: pass
+    merge_policy: null
+    branches: []
+subagents: []
+progress:
+  active_loop_ids: []
+  last_subagent_result: cleanup finished; retrying final report
+  last_failure_reason: previous final report delivery failed
+  completed_items: [all fixes]
+  in_progress_items: []
+  commit_refs: [abc1234, def5678]
+  test_summary: 119 passed
+  total_retry_count: 1
+  no_fix_rounds_total: 0
+resume:
+  mode: none
+  blocked_by: none
+  resume_at: null
+  note: null
+cleanup:
+  terminal_report_sent: false
+  wake_cleanup_complete: true

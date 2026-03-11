@@ -1,0 +1,65 @@
+id: fixture-watchdog-repair
+task: Repaired wake chain
+target: Continue after watchdog recovery
+status: running
+started_at: 2026-03-11T00:00:00Z
+workflow_deadline_at: 2026-03-11T05:00:00Z
+workdir: /tmp/project
+current: resume coordinator polling
+round: 3
+loops_mode: sequential
+execution_mode: spawned-worker
+origin:
+  session_kind: interactive-dm
+  session_id: main
+  report_to:
+    channel: telegram
+    target: '123'
+    threadId: null
+  report_context_locked: true
+coordination:
+  state_version: 7
+  writer_session: cron:watchdog
+  lease_expires_at: 2026-03-11T00:02:00Z
+  pending_transition: advance
+  last_cycle_at: 2026-03-11T00:00:00Z
+  next_expected_wake_at: 2026-03-11T00:06:00Z
+  current_wake_job_id: job-r1
+  next_wake_job_id: null
+  watchdog_job_id: jobw
+  cleanup_pending: [job-old]
+  watchdog_tripped_count: 1
+  alert_needed: true
+  alert_sent: false
+  poll_streak: 0
+  poll_complexity: moderate
+loops:
+  - id: loop-repair
+    parent: null
+    kind: single
+    status: running
+    round: 3
+    funcs: [resume]
+    current_func: resume
+    exit_condition: continue
+    merge_policy: null
+    branches: []
+subagents: []
+progress:
+  active_loop_ids: [loop-repair]
+  last_subagent_result: watchdog recreated the coordinator wake
+  last_failure_reason: coordinator wake chain broke and was repaired
+  completed_items: []
+  in_progress_items: [resume]
+  commit_refs: []
+  test_summary: null
+  total_retry_count: 0
+  no_fix_rounds_total: 0
+resume:
+  mode: none
+  blocked_by: none
+  resume_at: null
+  note: null
+cleanup:
+  terminal_report_sent: false
+  wake_cleanup_complete: false

@@ -1,0 +1,65 @@
+id: fixture-broken-wake-backlog
+task: Broken wake with cleanup backlog
+target: Watchdog/coordinator must rebuild wake chain
+status: running
+started_at: 2026-03-11T00:00:00Z
+workflow_deadline_at: 2026-03-11T23:00:00Z
+workdir: /tmp/project
+current: repair wake chain
+round: 3
+loops_mode: sequential
+execution_mode: spawned-worker
+origin:
+  session_kind: interactive-dm
+  session_id: main
+  report_to:
+    channel: telegram
+    target: '123'
+    threadId: null
+  report_context_locked: true
+coordination:
+  state_version: 9
+  writer_session: cron:watchdog
+  lease_expires_at: 2026-03-11T00:02:00Z
+  pending_transition: advance
+  last_cycle_at: 2026-03-11T00:00:00Z
+  next_expected_wake_at: 2026-03-11T00:06:00Z
+  current_wake_job_id: null
+  next_wake_job_id: null
+  watchdog_job_id: jobw
+  cleanup_pending: [job-old-1, job-old-2]
+  watchdog_tripped_count: 2
+  alert_needed: true
+  alert_sent: false
+  poll_streak: 0
+  poll_complexity: moderate
+loops:
+  - id: loop-backlog
+    parent: null
+    kind: single
+    status: running
+    round: 3
+    funcs: [repair]
+    current_func: repair
+    exit_condition: wake restored
+    merge_policy: null
+    branches: []
+subagents: []
+progress:
+  active_loop_ids: [loop-backlog]
+  last_subagent_result: coordinator wake missing
+  last_failure_reason: broken wake chain with cleanup backlog
+  completed_items: []
+  in_progress_items: [repair]
+  commit_refs: []
+  test_summary: null
+  total_retry_count: 0
+  no_fix_rounds_total: 0
+resume:
+  mode: none
+  blocked_by: none
+  resume_at: null
+  note: null
+cleanup:
+  terminal_report_sent: false
+  wake_cleanup_complete: false

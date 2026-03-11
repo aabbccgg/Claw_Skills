@@ -1,0 +1,114 @@
+id: fixture-branch-worker-conflict
+task: Detect branch worker conflict
+target: Branch conflict must block advance
+status: running
+started_at: 2026-03-11T00:00:00Z
+workflow_deadline_at: 2026-03-11T23:00:00Z
+workdir: /tmp/project
+current: branch-a
+round: 2
+loops_mode: parallel
+execution_mode: spawned-worker
+origin:
+  session_kind: interactive-dm
+  session_id: main
+  report_to:
+    channel: telegram
+    target: '123'
+    threadId: null
+  report_context_locked: true
+coordination:
+  state_version: 5
+  writer_session: main
+  lease_expires_at: 2026-03-11T00:02:00Z
+  pending_transition: advance
+  last_cycle_at: 2026-03-11T00:00:00Z
+  next_expected_wake_at: 2026-03-11T00:06:00Z
+  current_wake_job_id: job-c1
+  next_wake_job_id: null
+  watchdog_job_id: jobw
+  cleanup_pending: []
+  watchdog_tripped_count: 0
+  alert_needed: false
+  alert_sent: false
+  poll_streak: 1
+  poll_complexity: moderate
+loops:
+  - id: loop-conflict
+    parent: null
+    kind: parallel
+    status: running
+    round: 2
+    funcs: [branch-a, branch-b]
+    current_func: branch-a
+    exit_condition: both done
+    merge_policy: all-success
+    branches:
+      - branch_id: branch-a
+        status: running
+        funcs: [dev, test]
+        current_func: dev
+        retry_count: 0
+        no_fix_rounds: 0
+        active_subagent: agent:branch-a:1
+        last_progress_at: 2026-03-11T00:01:00Z
+      - branch_id: branch-b
+        status: running
+        funcs: [dev, test]
+        current_func: dev
+        retry_count: 0
+        no_fix_rounds: 0
+        active_subagent: agent:branch-b:1
+        last_progress_at: 2026-03-11T00:01:00Z
+subagents:
+  - child_session_key: agent:branch-a:1
+    run_id: run-c1
+    loop_id: loop-conflict
+    branch_id: branch-a
+    status: running
+    started_at: 2026-03-11T00:00:00Z
+    timeout_at: 2026-03-11T01:00:00Z
+    last_checked_at: 2026-03-11T00:01:00Z
+    summary: branch-a worker 1 running
+    criteria_assessment: not-met
+    next_action_hint: advance
+  - child_session_key: agent:branch-a:2
+    run_id: run-c2
+    loop_id: loop-conflict
+    branch_id: branch-a
+    status: running
+    started_at: 2026-03-11T00:00:30Z
+    timeout_at: 2026-03-11T01:00:30Z
+    last_checked_at: 2026-03-11T00:01:00Z
+    summary: branch-a worker 2 running
+    criteria_assessment: not-met
+    next_action_hint: advance
+  - child_session_key: agent:branch-b:1
+    run_id: run-c3
+    loop_id: loop-conflict
+    branch_id: branch-b
+    status: running
+    started_at: 2026-03-11T00:00:00Z
+    timeout_at: 2026-03-11T01:00:00Z
+    last_checked_at: 2026-03-11T00:01:00Z
+    summary: branch-b worker running
+    criteria_assessment: not-met
+    next_action_hint: advance
+progress:
+  active_loop_ids: [loop-conflict]
+  last_subagent_result: branch-a has conflicting workers
+  last_failure_reason: conflicting active workers on branch-a
+  completed_items: []
+  in_progress_items: [branch-a, branch-b]
+  commit_refs: []
+  test_summary: null
+  total_retry_count: 0
+  no_fix_rounds_total: 0
+resume:
+  mode: none
+  blocked_by: none
+  resume_at: null
+  note: null
+cleanup:
+  terminal_report_sent: false
+  wake_cleanup_complete: false

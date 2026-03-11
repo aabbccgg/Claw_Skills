@@ -1,0 +1,92 @@
+id: fixture-parallel
+task: Parallel branch work
+target: Merge after branches satisfy policy
+status: running
+started_at: 2026-03-11T00:00:00Z
+workflow_deadline_at: 2026-03-11T05:00:00Z
+workdir: /tmp/project
+current: branch-a
+round: 2
+loops_mode: parallel
+execution_mode: spawned-worker
+origin:
+  session_kind: interactive-dm
+  session_id: main
+  report_to:
+    channel: telegram
+    target: '123'
+    threadId: null
+  report_context_locked: true
+coordination:
+  state_version: 4
+  writer_session: main
+  lease_expires_at: 2026-03-11T00:02:00Z
+  pending_transition: advance
+  last_cycle_at: 2026-03-11T00:00:00Z
+  next_expected_wake_at: 2026-03-11T00:06:00Z
+  current_wake_job_id: job-p1
+  next_wake_job_id: null
+  watchdog_job_id: jobw
+  cleanup_pending: []
+  watchdog_tripped_count: 0
+  alert_needed: false
+  alert_sent: false
+  poll_streak: 1
+  poll_complexity: moderate
+loops:
+  - id: parallel-loop
+    parent: null
+    kind: parallel
+    status: running
+    round: 2
+    funcs: [branch-a, branch-b]
+    current_func: branch-a
+    exit_condition: both done
+    merge_policy: all-success
+    branches:
+      - branch_id: branch-a
+        status: running
+        funcs: [dev, test]
+        current_func: dev
+        retry_count: 0
+        no_fix_rounds: 0
+        active_subagent: agent:branch-a
+        last_progress_at: 2026-03-11T00:01:00Z
+      - branch_id: branch-b
+        status: complete
+        funcs: [dev, test]
+        current_func: null
+        retry_count: 0
+        no_fix_rounds: 0
+        active_subagent: null
+        last_progress_at: 2026-03-11T00:01:00Z
+subagents:
+  - child_session_key: agent:branch-a
+    run_id: run-p1
+    loop_id: parallel-loop
+    branch_id: branch-a
+    status: running
+    started_at: 2026-03-11T00:00:00Z
+    timeout_at: 2026-03-11T01:00:00Z
+    last_checked_at: 2026-03-11T00:01:00Z
+    summary: branch-a still running
+    criteria_assessment: not-met
+    next_action_hint: advance
+progress:
+  active_loop_ids: [parallel-loop]
+  last_subagent_result: branch-a still running
+  last_failure_reason: null
+  completed_items: [branch-b]
+  in_progress_items: [branch-a]
+  commit_refs: []
+  test_summary: branch-b passed
+  total_retry_count: 0
+  no_fix_rounds_total: 0
+resume:
+  mode: none
+  blocked_by: none
+  resume_at: null
+  note: null
+cleanup:
+  terminal_report_sent: false
+  wake_cleanup_complete: false
