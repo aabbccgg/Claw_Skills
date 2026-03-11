@@ -94,9 +94,13 @@ Coordinator workflow:
 1. Read `STATE.md`.
 2. Run `scripts/validate_state.py <state_path>` to validate structure.
 3. Run `scripts/validate_protocol.py <state_path>` to validate protocol invariants.
-4. Repair missing or overdue wakes.
-5. Poll active workers via `sessions_history`.
-6. Ingest results.
+4. Choose the minimal mode for this wake:
+   - `ingest-only` if a worker result already exists and only needs ingestion
+   - `repair-only` if the wake chain is broken
+   - `dispatch-only` if no worker exists for the current step
+   - otherwise normal poll/advance
+5. Keep the wake narrow. Do not broadly re-read docs, examples, fixtures, or CLI help unless validation itself fails.
+6. In `ingest-only`, prioritize result ingestion before any redispatch or broader repair.
 7. Run `scripts/evaluate_progress.py <state_path> --json` to determine actionable loops, branch readiness, and merge readiness.
 8. Run `scripts/check_stall.py <state_path> --json` to determine whether dead-loop or no-fix-rounds policy requires pause.
 9. Run `scripts/check_transition.py <state_path> --event <canonical-event> --to <status> --json` for every candidate non-terminal transition. Do not bypass this check.

@@ -76,6 +76,10 @@ def main():
     if status == 'running' and not active_workers and coord.get('pending_transition') == 'idle' and (progress.get('in_progress_items') or []):
         errors.append('running state with in-progress items requires active worker or non-idle transition')
 
+    # Ingest-first invariant: if a completed worker result already exists, redispatch-oriented state is suspicious.
+    if completed_or_terminal_workers and status == 'running' and coord.get('pending_transition') == 'spawn':
+        warnings.append('completed worker result exists while state still points at spawn; prefer ingest-only recovery')
+
     # Existing-agent dispatch/result invariants.
     if state.get('execution_mode') == 'existing-agent':
         if active_workers and status != 'awaiting-review':

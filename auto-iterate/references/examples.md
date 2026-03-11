@@ -27,7 +27,7 @@
   "action": "add",
   "job": {
     "name": "auto-iterate-watchdog",
-    "schedule": {"kind": "every", "everyMs": 600000},
+    "schedule": {"kind": "every", "everyMs": 180000},
     "agentId": "<own_agent_id>",
     "payload": {
       "kind": "agentTurn",

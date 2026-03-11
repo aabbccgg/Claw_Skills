@@ -30,6 +30,9 @@ FIXTURES = [
     ROOT / 'scripts' / 'fixtures' / 'existing-agent-redundant-redispatch.yaml',
     ROOT / 'scripts' / 'fixtures' / 'milestone-pending-report.yaml',
     ROOT / 'scripts' / 'fixtures' / 'repair-pending-report.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'ingest-only-recovery.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'dispatch-only-recovery.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'repair-only-recovery.yaml',
 ]
 
 
@@ -51,6 +54,7 @@ EXPECTED_FAILURES = {
     ('repair-verification-incomplete.yaml', 'validate_protocol.py'),
     ('existing-agent-dispatch-timeout-misclassified.yaml', 'validate_protocol.py'),
     ('existing-agent-redundant-redispatch.yaml', 'validate_protocol.py'),
+    ('repair-only-recovery.yaml', 'validate_protocol.py'),
 }
 
 

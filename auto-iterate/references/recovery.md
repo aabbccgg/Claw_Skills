@@ -7,19 +7,25 @@ Run in this order on every isolated coordinator wake:
 1. Read `STATE.md`.
 2. Exit if `status: complete`.
 3. Validate or acquire the writer lease.
-4. Verify liveness:
-   - `current_wake_job_id` exists
-   - `next_expected_wake_at` is not badly overdue
-5. If the wake chain is broken, add a replacement coordinator wake immediately and persist it before deeper work.
-6. If `coordination.alert_needed: true`, preserve it for the next recovered coordinator REPORT step; the coordinator clears it during PERSIST in the same cycle that emits the `⚠️` repair alert during REPORT.
-7. Inspect active workers.
-8. Ingest finished results.
-9. Choose exactly one next transition.
-10. Persist full state.
-11. Schedule successor wake if still non-terminal.
-12. Remove old wake ids only after the replacement wake is durable.
-13. Report from committed state. If `progress.pending_reports` contains a queued milestone or repair update, emit that first.
-14. If a queued pending report was delivered successfully, persist queue cleanup before END.
+4. Determine recovery mode:
+   - `ingest-only` if a worker result already exists and only needs ingestion
+   - `repair-only` if the wake chain is broken
+   - `dispatch-only` if no worker exists for the current step
+   - otherwise normal poll/advance
+5. In `ingest-only`, ingest existing worker results before any redispatch or broader repair.
+6. If the wake chain is broken, add a replacement coordinator wake immediately and persist it before deeper work.
+7. If `coordination.alert_needed: true`, preserve it for the next recovered coordinator REPORT step; the coordinator clears it during PERSIST in the same cycle that emits the `⚠️` repair alert during REPORT.
+8. Evaluate progress and choose exactly one next transition.
+9. Persist full state.
+10. Schedule successor wake if still non-terminal.
+11. Remove old wake ids only after the replacement wake is durable.
+12. Report from committed state. If `progress.pending_reports` contains a queued milestone or repair update, emit that first.
+13. If a queued pending report was delivered successfully, persist queue cleanup before END.
+
+Reading policy for recovery wakes:
+- Read `STATE.md` first.
+- Read only the minimum directly relevant script or reference needed for the chosen mode.
+- Do not broadly re-read examples, fixtures, or CLI help unless validation fails.
 
 ## Broken wake chain repair
 
