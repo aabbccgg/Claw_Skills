@@ -24,7 +24,7 @@ Start only when all are true:
 - Required tools for the selected mode are available under effective tool policy.
 
 Modes:
-- **Spawned-worker mode** — default and preferred. Requires `cron`, `message`, `sessions_spawn`, `sessions_history`.
+- **Spawned-worker mode** — default and preferred. Requires `cron`, `message`, `sessions_spawn`, `sessions_history`. Use `sessions_spawn(..., runTimeoutSeconds=1800)` unless a shorter worker budget is explicitly justified.
 - **Existing-agent mode** — optional and best-effort. Requires `sessions_send`, `sessions_history` visibility to the target session, and a dedicated automation-safe target session.
 
 Fallback:
@@ -88,7 +88,7 @@ Core rules:
 - Add successor wake before removing superseded wake.
 - Delegate heavy execution to workers.
 - Make every wake message self-contained.
-- Use `payload.timeoutSeconds = 600` for coordinator and watchdog isolated cron jobs unless a clearly simpler job justifies less.
+- Use `payload.timeoutSeconds = 1800` for coordinator and watchdog isolated cron jobs unless a clearly simpler job justifies less.
 - In isolated coordinator wakes, do not spend the cycle on long narrative recap, broad re-planning, or user-facing explanation before dispatch/poll/persist/schedule.
 - A non-terminal coordinator cycle is invalid if it ends without at least one concrete progress action: dispatching a worker, ingesting worker output, persisting a transition, or durably scheduling the successor wake.
 - Long business work belongs in workers, not in the coordinator or watchdog.
