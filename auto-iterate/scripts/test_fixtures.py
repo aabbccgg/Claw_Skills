@@ -23,6 +23,8 @@ FIXTURES = [
     ROOT / 'scripts' / 'fixtures' / 'deadline-exceeded.yaml',
     ROOT / 'scripts' / 'fixtures' / 'quota-resumed.yaml',
     ROOT / 'scripts' / 'fixtures' / 'watchdog-direct-alert.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'no-dispatch-no-reschedule.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'repair-verification-incomplete.yaml',
 ]
 
 
@@ -39,6 +41,8 @@ MODE_OVERRIDES = {
 EXPECTED_FAILURES = {
     ('branch-worker-conflict.yaml', 'validate_protocol.py'),
     ('broken-wake-backlog.yaml', 'validate_protocol.py'),
+    ('no-dispatch-no-reschedule.yaml', 'validate_protocol.py'),
+    ('repair-verification-incomplete.yaml', 'validate_protocol.py'),
 }
 
 

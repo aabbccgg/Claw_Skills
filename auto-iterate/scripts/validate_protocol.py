@@ -54,6 +54,17 @@ def main():
     if cleanup.get('wake_cleanup_complete') and not cleanup.get('terminal_report_sent') and not coord.get('watchdog_job_id'):
         errors.append('final report retry path requires watchdog while terminal_report_sent=false')
 
+    # Detect no-dispatch/no-reschedule style failed cycles.
+    if status == 'running' and not active_workers and coord.get('pending_transition') == 'idle' and (progress.get('in_progress_items') or []):
+        errors.append('running state with in-progress items requires active worker or non-idle transition')
+
+    # Repair verification completeness.
+    if coord.get('alert_needed'):
+        if not coord.get('current_wake_job_id'):
+            errors.append('repair verification incomplete: missing replacement current_wake_job_id')
+        if not coord.get('next_expected_wake_at'):
+            errors.append('repair verification incomplete: missing refreshed next_expected_wake_at')
+
     if state.get('loops_mode') == 'sequential':
         top = [loop for loop in loops if not loop.get('parent')]
         incomplete = [loop for loop in top if loop.get('status') != 'complete']

@@ -73,6 +73,14 @@ Watchdog repair rules:
 6. Exception: if `watchdog_tripped_count >= 3` and the coordinator has still not recovered, send one alert using the `⚠️` watchdog-repair template from `references/examples.md`, then set `coordination.alert_sent: true` to prevent duplicates.
 7. Otherwise, leave `coordination.alert_needed: true` for the next recovered coordinator cycle to report.
 
+Repair verification checklist:
+- `coordination.current_wake_job_id` points to the replacement wake
+- `coordination.next_expected_wake_at` is refreshed
+- superseded wake ids, if any, are retained in `cleanup_pending[]`
+- `coordination.alert_needed` remains true until a recovered coordinator reports the repair
+
+If any verification item is missing, the repair is incomplete. Keep watchdog alive, preserve repair state, and retry instead of assuming the chain is healthy.
+
 ## Quota suspension integration
 
 Before expensive spawns or respawns that will use Claude-family models, verify quota directly from runtime-available provider metadata. Do not depend on external skill state.

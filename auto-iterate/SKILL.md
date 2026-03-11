@@ -89,6 +89,8 @@ Core rules:
 - Keep `workflow_deadline_at = started_at + 3h` fixed.
 - Delegate heavy execution to workers.
 - Make every wake message self-contained.
+- In isolated coordinator wakes, do not spend the cycle on long narrative recap, broad re-planning, or user-facing explanation before dispatch/poll/persist/schedule.
+- A non-terminal coordinator cycle is invalid if it ends without at least one concrete progress action: dispatching a worker, ingesting worker output, persisting a transition, or durably scheduling the successor wake.
 
 Coordinator workflow:
 1. Read `STATE.md`.
@@ -104,8 +106,10 @@ Coordinator workflow:
 11. Compute deterministic next-poll delay with `scripts/compute_next_poll.py --state-path <state_path>`.
 12. Schedule the successor wake if non-terminal.
 13. Render the correct report text with `scripts/render_progress.py <state_path> --mode <progress|pause|resume|repair|final>`.
-14. Send the report.
+14. Send one short user-visible report from committed state.
 15. End immediately.
+
+If the wake reached END without real progress and without a durable successor wake, treat the cycle as failed and rely on watchdog repair rather than emitting a long explanatory recap.
 
 Read `references/flow.md` for the explicit transition model, loop progression semantics, and dead-loop policy. Treat it as binding protocol, not optional guidance.
 

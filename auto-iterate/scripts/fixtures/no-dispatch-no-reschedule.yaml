@@ -1,0 +1,65 @@
+id: fixture-no-dispatch-no-reschedule
+task: Invalid running cycle with no real progress
+target: Validator should reject no-progress running state
+status: running
+started_at: 2026-03-11T00:00:00Z
+workflow_deadline_at: 2026-03-11T23:00:00Z
+workdir: /tmp/project
+current: explanatory recap only
+round: 1
+loops_mode: sequential
+execution_mode: existing-agent
+origin:
+  session_kind: interactive-group
+  session_id: main
+  report_to:
+    channel: telegram
+    target: '123'
+    threadId: '1'
+  report_context_locked: true
+coordination:
+  state_version: 2
+  writer_session: cron:job
+  lease_expires_at: 2026-03-11T00:02:00Z
+  pending_transition: idle
+  last_cycle_at: 2026-03-11T00:00:00Z
+  next_expected_wake_at: 2026-03-11T00:06:00Z
+  current_wake_job_id: job-live
+  next_wake_job_id: null
+  watchdog_job_id: jobw
+  cleanup_pending: []
+  watchdog_tripped_count: 0
+  alert_needed: false
+  alert_sent: false
+  poll_streak: 0
+  poll_complexity: moderate
+loops:
+  - id: loop-start
+    parent: null
+    kind: single
+    status: running
+    round: 1
+    funcs: [developer-fix, tester-verify]
+    current_func: developer-fix
+    exit_condition: pass
+    merge_policy: null
+    branches: []
+subagents: []
+progress:
+  active_loop_ids: [loop-start]
+  last_subagent_result: no real worker dispatch yet
+  last_failure_reason: cycle spent on recap only
+  completed_items: []
+  in_progress_items: [developer-fix]
+  commit_refs: []
+  test_summary: null
+  total_retry_count: 0
+  no_fix_rounds_total: 0
+resume:
+  mode: none
+  blocked_by: none
+  resume_at: null
+  note: null
+cleanup:
+  terminal_report_sent: false
+  wake_cleanup_complete: false
