@@ -51,12 +51,13 @@ def loop_action(loop, state):
             'actionable': False,
             'reason': 'waiting-active-child-loop',
             'activeChildren': [c.get('id') for c in children],
+            'mustNotAdvance': True,
         }
 
     if parent:
         parent_loop = next((x for x in loops if x.get('id') == parent), None)
         if parent_loop and parent_loop.get('status') == 'complete':
-            return {'loopId': loop_id, 'actionable': False, 'reason': 'parent-complete'}
+            return {'loopId': loop_id, 'actionable': False, 'reason': 'parent-complete', 'mustNotAdvance': True}
 
     if not branches:
         return {
@@ -66,6 +67,9 @@ def loop_action(loop, state):
             'currentFunc': loop.get('current_func'),
             'mergeReady': False,
             'mustNotAdvance': False,
+            'recommendedEvent': None,
+            'recommendedTo': None,
+            'reason': None,
         }
 
     active_branch_ids, completed_branch_ids, blocked_branch_ids, worker_conflicts = [], [], [], []
@@ -87,20 +91,31 @@ def loop_action(loop, state):
     must_not_advance = False
     recommended_event = None
     recommended_to = None
+    reason = None
 
     if merge_policy == 'all-success':
         merge_ready = len(completed_branch_ids) == len(branches) and len(branches) > 0
     elif merge_policy == 'quorum':
         merge_ready = len(completed_branch_ids) >= max(1, (len(branches) // 2) + (len(branches) % 2))
     elif merge_policy == 'custom-user-criterion':
-        needs_user_criterion = bool(completed_branch_ids or active_branch_ids or blocked_branch_ids)
-        merge_ready = False
-        must_not_advance = True
+        if active_branch_ids:
+            needs_user_criterion = False
+            merge_ready = False
+            must_not_advance = False
+            reason = 'waiting-for-remaining-branches-before-user-criterion'
+        else:
+            needs_user_criterion = True
+            merge_ready = False
+            must_not_advance = True
+            recommended_event = 'pause-requested'
+            recommended_to = 'paused'
+            reason = 'custom-user-criterion-not-explicitly-satisfied'
 
     if worker_conflicts:
         must_not_advance = True
         recommended_event = 'pause-requested'
         recommended_to = 'paused'
+        reason = f'branch-worker-conflict:{worker_conflicts[0]}'
 
     return {
         'loopId': loop_id,
@@ -117,6 +132,7 @@ def loop_action(loop, state):
         'mustNotAdvance': must_not_advance,
         'recommendedEvent': recommended_event,
         'recommendedTo': recommended_to,
+        'reason': reason,
     }
 
 

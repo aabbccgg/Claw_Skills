@@ -8,6 +8,7 @@ import yaml
 
 ACTIVE = {"accepted", "running"}
 TERMINAL = {"complete", "paused"}
+TERMINALISH_WORKER = {"success", "no-change", "blocked", "failed", "timed-out", "stalled"}
 
 
 def load_state(path: Path):
@@ -34,8 +35,9 @@ def main():
     loops = state.get('loops', []) or []
     subs = state.get('subagents', []) or []
     active_workers = [s for s in subs if s.get('status') in ACTIVE]
-    completed_or_terminal_workers = [s for s in subs if s.get('status') in {'success', 'no-change', 'blocked', 'failed', 'timed-out', 'stalled'}]
+    completed_or_terminal_workers = [s for s in subs if s.get('status') in TERMINALISH_WORKER]
 
+    # Core state/status invariants.
     if status == 'awaiting-review' and not active_workers and not completed_or_terminal_workers:
         errors.append('awaiting-review requires an active worker or a completed worker result pending ingestion')
     if status == 'complete' and active_workers:
@@ -49,29 +51,43 @@ def main():
             errors.append('non-terminal workflow requires current_wake_job_id')
         if not coord.get('next_expected_wake_at'):
             errors.append('non-terminal workflow requires next_expected_wake_at')
+        if not coord.get('watchdog_job_id'):
+            warnings.append('non-terminal workflow is missing watchdog_job_id')
     if coord.get('alert_needed') and cleanup.get('terminal_report_sent'):
         warnings.append('alert_needed true after terminal report sent')
     if status == 'paused' and resume.get('mode') == 'none':
         warnings.append('paused state has no resume metadata')
     if cleanup.get('wake_cleanup_complete') and not cleanup.get('terminal_report_sent') and not coord.get('watchdog_job_id'):
         errors.append('final report retry path requires watchdog while terminal_report_sent=false')
+    if coord.get('cleanup_pending') and cleanup.get('wake_cleanup_complete'):
+        warnings.append('cleanup_pending still non-empty after wake_cleanup_complete=true')
+
+    # Pending report invariants.
     keys = [item.get('key') for item in pending_reports if isinstance(item, dict) and item.get('key')]
     if len(keys) != len(set(keys)):
         warnings.append('progress.pending_reports contains duplicate report keys')
+    if cleanup.get('terminal_report_sent') and pending_reports:
+        warnings.append('pending_reports still queued after terminal_report_sent=true')
+    if progress.get('completed_items') and not cleanup.get('terminal_report_sent') and not pending_reports and len(progress.get('active_loop_ids') or []) <= 1:
+        # Keep this as a warning: milestone omission is bad UX, but not always invalid protocol.
+        warnings.append('completed work exists without a queued milestone report')
 
     # Detect no-dispatch/no-reschedule style failed cycles.
     if status == 'running' and not active_workers and coord.get('pending_transition') == 'idle' and (progress.get('in_progress_items') or []):
         errors.append('running state with in-progress items requires active worker or non-idle transition')
 
-    # Existing-agent dispatch must transition to awaiting-review after enqueue.
+    # Existing-agent dispatch/result invariants.
     if state.get('execution_mode') == 'existing-agent':
         if active_workers and status != 'awaiting-review':
             errors.append('existing-agent dispatch with accepted/running worker must use status=awaiting-review')
         lfr = (progress.get('last_failure_reason') or '').lower()
+        current = (state.get('current') or '').lower()
         if active_workers and 'dispatch failed' in lfr:
             errors.append('dispatch failure is misclassified: existing-agent worker already accepted/running')
-        if active_workers and 'retry dispatch' in (state.get('current') or '').lower():
+        if active_workers and 'retry dispatch' in current:
             errors.append('redundant redispatch detected while existing-agent worker is already accepted/running')
+        if completed_or_terminal_workers and coord.get('pending_transition') == 'spawn':
+            warnings.append('existing-agent workflow still marked for spawn even though a worker result already exists')
 
     # Repair verification completeness.
     if coord.get('alert_needed'):
@@ -80,6 +96,7 @@ def main():
         if not coord.get('next_expected_wake_at'):
             errors.append('repair verification incomplete: missing refreshed next_expected_wake_at')
 
+    # Loop / progression invariants.
     if state.get('loops_mode') == 'sequential':
         top = [loop for loop in loops if not loop.get('parent')]
         incomplete = [loop for loop in top if loop.get('status') != 'complete']
@@ -108,6 +125,8 @@ def main():
             errors.append(f'loop {loop.get("id")} complete without quorum branch completion')
         if merge_policy == 'custom-user-criterion' and loop.get('status') == 'complete':
             warnings.append(f'loop {loop.get("id")} complete under custom-user-criterion; ensure explicit user criterion was satisfied')
+        if merge_policy == 'custom-user-criterion' and completed and loop.get('status') == 'running' and not pending_reports:
+            warnings.append(f'loop {loop.get("id")} has completed branches under custom-user-criterion but no pending milestone/user-action report queued')
 
         for bid in active_branch_ids:
             count = sum(1 for s in subs if s.get('loop_id') == loop.get('id') and s.get('branch_id') == bid and s.get('status') in ACTIVE)
