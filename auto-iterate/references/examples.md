@@ -145,17 +145,21 @@ Expected resume: 4:15 PM
 
 ### Resume
 
+Resume reports may include `Reason:` when the committed state provides a meaningful resume note (for example quota recovery context). If no such note exists, omit the line.
+
 ```text
 ▶️ Round 4 | Loop: refine-code
 
 Status: automatic iteration resumed
-Reason: Claude quota restored / coordinator recovered control
+Reason: quota restored / coordinator recovered control
 Current: backend branch resumed
 Next: continue Round 4 development and verification
 ⏰ Next check: 4:24 PM
 ```
 
 ### Repair alert
+
+Repair reports may include `Handled:` (Count>1)
 
 ```text
 ⚠️ Round 3 | Loop: round3
