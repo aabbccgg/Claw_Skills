@@ -124,37 +124,33 @@ Routing rule: the coordinator sends these messages directly to `origin.report_to
 ### Progress
 
 ```text
-🔄 [auto-iterate] Round 3 | Loop: fix-rawdata-error (2:03 PM)
+🔄 Round 3 | Loop: fix-rawdata-error
 
-Developer 🔄 Working on the fix
-• Completed: dark mode ✅, admin whitelist ✅
+Milestone: dark mode done; tester handoff queued
 • In progress: rawData.some error fix
-
-Next: wait for developer completion, then hand off to tester
+Next: wait for tester verification
 ⏰ Next check: 2:09 PM
 ```
 
 ### Pause
 
 ```text
-⏸️ [auto-iterate] Round 4 | Loop: refine-code (3:30 PM)
+⏸️ Round 4 | Loop: refine-code
 
 Reason: Claude quota suspension
-Expected resume: 4:15 PM (quota reset + 90s)
-Current progress: 3/5 loops done, backend branch waiting to continue
-
-Status window: paused until explicit resume or quota recovery
+Current: backend branch waiting to continue
+Expected resume: 4:15 PM
+⏰ Next check: 4:15 PM
 ```
 
 ### Resume
 
 ```text
-▶️ [auto-iterate] Round 4 | Loop: refine-code (4:16 PM)
+▶️ Round 4 | Loop: refine-code
 
 Status: automatic iteration resumed
 Reason: Claude quota restored / coordinator recovered control
-Current progress: backend branch resumed, preparing tester verification
-
+Current: backend branch resumed
 Next: continue Round 4 development and verification
 ⏰ Next check: 4:24 PM
 ```
@@ -162,13 +158,11 @@ Next: continue Round 4 development and verification
 ### Repair alert
 
 ```text
-⚠️ [auto-iterate] Round 3 | Loop: round3 (2:20 PM)
+⚠️ Round 3 | Loop: round3
 
-Status: coordinator wake failed, watchdog repaired the chain
-Handled: recreated the coordinator wake, retained the old wake for cleanup
-Impact: iteration state was preserved and will continue from the latest committed STATE
-
-Next: wait for the new coordinator wake to resume polling
+Status: coordinator wake chain repaired
+Handled: repair count = 2
+Next: resume coordinator polling
 ⏰ Next check: 2:28 PM
 ```
 

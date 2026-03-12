@@ -74,7 +74,7 @@ The coordinator sends progress, milestone, pause, resume, repair, and completion
 
 Do not let workers, existing agents, or watchdog send user-visible progress directly, except for the narrow watchdog emergency exception defined in `references/recovery.md`.
 
-Use `scripts/render_progress.py` to generate user-visible messages from committed state.
+Use `scripts/render_progress.py` to generate user-visible messages from committed state. Keep the progress message minimal: header + optional milestone + in-progress summary + next action + next check. 
 
 ## 6. Run one coordination cycle per wake
 
