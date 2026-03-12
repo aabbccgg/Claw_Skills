@@ -6,7 +6,7 @@ Use exactly one fenced YAML block in `STATE.md`.
 id: <iteration-id>
 task: <short user task summary>
 target: <explicit global completion criteria>
-status: running|awaiting-review|paused|complete
+status: running|awaiting-result|paused|complete
 started_at: <ISO8601>
 workdir: <absolute path>
 current: <short human-readable current action>
@@ -112,7 +112,7 @@ cleanup:
 - `coordination.alert_sent` prevents duplicate watchdog repair alerts when the watchdog uses the narrow direct-alert exception.
 - `progress.active_loop_ids` is the canonical active-loop path used for resume.
 - `progress.last_failure_reason` stores the latest orchestration or worker-mode failure reason.
-- Worker dispatch success must move the workflow to `awaiting-review` with a `subagents[]` record in `accepted` or `running` state; lack of same-wake final result is not itself a failure.
+- Worker dispatch success must move the workflow to `awaiting-result` with a `subagents[]` record in `accepted` or `running` state; lack of same-wake final result is not itself a failure.
 - `progress.completed_items`, `progress.in_progress_items`, `progress.commit_refs`, and `progress.test_summary` are optional presentation fields consumed by `scripts/render_progress.py`.
 - `progress.pending_reports` is an optional queue of owed user-visible reports (especially milestone updates). Each item should use `{type, key, summary}` so the coordinator can render it and then clear it after successful delivery.
 - `cleanup.*` makes terminal reporting and wake removal idempotent.

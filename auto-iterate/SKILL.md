@@ -62,7 +62,7 @@ If any step fails before durability is reached, stop and repair state instead of
 
 Store orchestration state in exactly one fenced YAML document at `STATE.md`. Read from disk on every coordinator or watchdog wake. Never trust chat history.
 
-Core statuses are `running`, `awaiting-review`, `paused`, and `complete`.
+Core statuses are `running`, `awaiting-result`, `paused`, and `complete`.
 
 Use `scripts/validate_state.py` whenever state may be inconsistent, after major edits, before terminal cleanup, and whenever a coordinator suspects drift between expected and persisted state.
 
@@ -136,10 +136,10 @@ Agent-profile reuse rules:
 
 Worker dispatch contract:
 - Dispatch in one wake.
-- Validate `running --worker-dispatched--> awaiting-review`.
-- Immediately persist worker-dispatched state: `status=awaiting-review`, `subagents[].status=accepted`, `started_at`, and worker session metadata.
+- Validate `running --worker-dispatched--> awaiting-result`.
+- Immediately persist worker-dispatched state: `status=awaiting-result`, `subagents[].status=accepted`, `started_at`, and worker session metadata.
 - Schedule the successor wake and END.
-- In later wakes, ingest results only via `sessions_history` and validate `awaiting-review --worker-result--> running|paused|complete`.
+- In later wakes, ingest results only via `sessions_history` and validate `awaiting-result --worker-result--> running|paused|complete`.
 - Lack of a same-wake final result is normal. Do not misclassify dispatch as failure after a worker was successfully spawned and recorded.
 
 ## 8. Keep the watchdog alive until reporting is done

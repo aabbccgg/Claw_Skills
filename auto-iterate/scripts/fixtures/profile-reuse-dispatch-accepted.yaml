@@ -1,10 +1,11 @@
-id: fixture-worker-awaiting-review
-task: Worker orchestration
-target: Worker returns review result
-status: awaiting-review
+id: fixture-profile-reuse-dispatch-accepted
+task: Profile-reuse worker dispatch accepted
+target: User named agent profile resolves to fresh spawned worker
+action: dispatch matched profile as fresh isolated worker
+status: awaiting-result
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
-current: wait for worker
+current: wait for worker result
 round: 1
 loops_mode: sequential
 execution_mode: spawned-worker
@@ -17,13 +18,13 @@ origin:
     threadId: null
   report_context_locked: true
 coordination:
-  state_version: 3
+  state_version: 4
   writer_session: main
   lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: spawn
   last_cycle_at: 2026-03-11 00:00:00+00:00
   next_expected_wake_at: 2026-03-11 00:06:00+00:00
-  current_wake_job_id: job-e1
+  current_wake_job_id: job-pr1
   next_wake_job_id: null
   watchdog_job_id: jobw
   cleanup_pending: []
@@ -34,39 +35,44 @@ coordination:
   poll_complexity: moderate
   cron_path: native-first-cli-fallback
 loops:
-- id: loop-existing
+- id: part1
   parent: null
   kind: single
   status: running
   round: 1
   funcs:
-  - review
-  current_func: review
-  exit_condition: review returned
+  - developer-fix
+  - tester-verify
+  current_func: developer-fix
+  exit_condition: done
   merge_policy: null
   branches: []
 subagents:
-- child_session_key: agent:reviewer:telegram:group:-100:topic:1
-  run_id: run-worker-awaiting-review
-  loop_id: loop-existing
+- child_session_key: agent:general:subagent:profile-reuse-1
+  run_id: run-profile-reuse-1
+  loop_id: part1
   branch_id: null
-  status: running
+  status: accepted
   started_at: 2026-03-11 00:00:00+00:00
   timeout_at: 2026-03-11 01:00:00+00:00
-  last_checked_at: 2026-03-11 00:01:00+00:00
-  summary: worker is reviewing
+  last_checked_at: null
+  summary: profile-reused worker handoff queued
   criteria_assessment: unclear
   next_action_hint: advance
 progress:
   active_loop_ids:
-  - loop-existing
-  last_subagent_result: worker is reviewing
+  - part1
+  last_subagent_result: resolved named agent profile frontend-dev and spawned a fresh worker
   last_failure_reason: null
   completed_items: []
   in_progress_items:
-  - review
+  - developer-fix
   commit_refs: []
   test_summary: null
+  pending_reports:
+  - type: progress
+    key: profile-reuse-dispatch
+    summary: Resolved named agent profile frontend-dev and spawned a fresh isolated worker
   total_retry_count: 0
   no_fix_rounds_total: 0
 resume:

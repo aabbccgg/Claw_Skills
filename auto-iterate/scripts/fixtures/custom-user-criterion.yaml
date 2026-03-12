@@ -1,7 +1,7 @@
 id: fixture-custom-user-criterion
 task: Custom user criterion merge
 target: Do not auto-merge until explicit criterion is satisfied
-status: awaiting-review
+status: awaiting-result
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: evaluate custom merge criterion

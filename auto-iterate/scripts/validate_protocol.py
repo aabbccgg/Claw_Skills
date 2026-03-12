@@ -39,8 +39,8 @@ def main():
     completed_or_terminal_workers = [s for s in subs if s.get('status') in TERMINALISH_WORKER]
 
     # Core state/status invariants.
-    if status == 'awaiting-review' and not active_workers and not completed_or_terminal_workers:
-        errors.append('awaiting-review requires an active worker or a completed worker result pending ingestion')
+    if status == 'awaiting-result' and not active_workers and not completed_or_terminal_workers:
+        errors.append('awaiting-result requires an active worker or a completed worker result pending ingestion')
     if status == 'complete' and active_workers:
         errors.append('complete must not have active workers')
     if status == 'complete' and not cleanup.get('wake_cleanup_complete'):
@@ -50,7 +50,7 @@ def main():
     if coord.get('cron_path') != EXPECTED_CRON_PATH:
         errors.append(f"cron_path policy drift: expected {EXPECTED_CRON_PATH}, got {coord.get('cron_path')}")
 
-    if status in {'running', 'awaiting-review'}:
+    if status in {'running', 'awaiting-result'}:
         if not coord.get('current_wake_job_id'):
             errors.append('non-terminal workflow requires current_wake_job_id')
         if not coord.get('next_expected_wake_at'):
@@ -85,8 +85,8 @@ def main():
         warnings.append('completed worker result exists while state still points at spawn; prefer ingest-only recovery')
 
     # Worker dispatch/result invariants.
-    if active_workers and status != 'awaiting-review':
-        errors.append('worker dispatch with accepted/running worker must use status=awaiting-review')
+    if active_workers and status != 'awaiting-result':
+        errors.append('worker dispatch with accepted/running worker must use status=awaiting-result')
     lfr = (progress.get('last_failure_reason') or '').lower()
     current = (state.get('current') or '').lower()
     if active_workers and 'dispatch failed' in lfr:

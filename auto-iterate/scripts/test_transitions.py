@@ -8,10 +8,10 @@ SCRIPT = ROOT / 'scripts' / 'check_transition.py'
 
 CASES = [
     {
-        'name': 'worker pre-dispatch -> awaiting-review',
+        'name': 'worker pre-dispatch -> awaiting-result',
         'fixture': ROOT / 'scripts' / 'fixtures' / 'worker-pre-dispatch.yaml',
         'event': 'worker-dispatched',
-        'to': 'awaiting-review',
+        'to': 'awaiting-result',
         'expect_ok': True,
     },
     {
@@ -32,7 +32,7 @@ CASES = [
         'name': 'alias dispatch rejected',
         'fixture': ROOT / 'scripts' / 'fixtures' / 'worker-pre-dispatch.yaml',
         'event': 'dispatch',
-        'to': 'awaiting-review',
+        'to': 'awaiting-result',
         'expect_ok': False,
     },
 ]

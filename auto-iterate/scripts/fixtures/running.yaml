@@ -1,7 +1,7 @@
 id: fixture-running
 task: Fix and verify one loop
 target: Tests pass and review criteria met
-status: awaiting-review
+status: awaiting-result
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: wait for developer completion
@@ -37,7 +37,7 @@ loops:
 - id: loop-a
   parent: null
   kind: single
-  status: awaiting-review
+  status: running
   round: 2
   funcs:
   - dev

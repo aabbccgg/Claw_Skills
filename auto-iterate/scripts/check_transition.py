@@ -15,14 +15,14 @@ ALIAS_HINTS = {
 
 ALLOWED = {
     'running': {
-        'worker-dispatched': ['awaiting-review'],
+        'worker-dispatched': ['awaiting-result'],
         'pause-requested': ['paused'],
         'quota-suspended': ['paused'],
         'dead-loop': ['paused'],
         'complete-requested': ['complete'],
         'repair-failed': ['paused'],
     },
-    'awaiting-review': {
+    'awaiting-result': {
         'worker-result': ['running', 'paused', 'complete'],
         'worker-timeout': ['running', 'paused'],
         'worker-failed': ['running', 'paused'],
@@ -53,8 +53,8 @@ def invariant_errors(state, from_status, event, to_status):
         errors.append('complete is terminal; no outbound transition allowed')
     if from_status == 'paused' and to_status == 'running' and event not in {'user-resume', 'quota-restored'}:
         errors.append('paused -> running requires explicit resume event')
-    if from_status == 'awaiting-review' and event == 'worker-result' and to_status == 'awaiting-review':
-        errors.append('awaiting-review must not remain awaiting-review after successful worker result ingestion')
+    if from_status == 'awaiting-result' and event == 'worker-result' and to_status == 'awaiting-result':
+        errors.append('awaiting-result must not remain awaiting-result after successful worker result ingestion')
     if to_status == 'complete':
         if not cleanup.get('wake_cleanup_complete'):
             errors.append('transition to complete requires cleanup.wake_cleanup_complete=true in terminal path')

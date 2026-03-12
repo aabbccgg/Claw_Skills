@@ -6,10 +6,10 @@ Allowed transitions:
 
 | From | Event | To |
 |---|---|---|
-| `running` | `worker-dispatched` | `awaiting-review` |
-| `awaiting-review` | `worker-result` | `running` / `paused` / `complete` |
-| `awaiting-review` | `worker-failed` | `running` / `paused` |
-| `awaiting-review` | `worker-timeout` | `running` / `paused` |
+| `running` | `worker-dispatched` | `awaiting-result` |
+| `awaiting-result` | `worker-result` | `running` / `paused` / `complete` |
+| `awaiting-result` | `worker-failed` | `running` / `paused` |
+| `awaiting-result` | `worker-timeout` | `running` / `paused` |
 | `running` | `pause-requested` / `dead-loop` / `quota-suspended` / `repair-failed` | `paused` |
 | `paused` | `user-resume` / `quota-restored` | `running` |
 | `running` | `complete-requested` | `complete` |
@@ -17,7 +17,7 @@ Allowed transitions:
 Forbidden transitions:
 - `complete -> *`
 - `paused -> running` without an explicit resume event
-- `awaiting-review -> awaiting-review` after successful worker result ingestion
+- `awaiting-result -> awaiting-result` after successful worker result ingestion
 - `running -> complete` before terminal cleanup path is prepared
 
 Canonical event vocabulary:

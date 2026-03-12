@@ -1,7 +1,7 @@
 id: fixture-worker-dispatch-accepted
 task: Worker dispatch accepted
-target: Dispatch should move workflow to awaiting-review
-status: awaiting-review
+target: Dispatch should move workflow to awaiting-result
+status: awaiting-result
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: wait for worker result

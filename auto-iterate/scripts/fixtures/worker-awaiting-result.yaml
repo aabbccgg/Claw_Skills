@@ -1,10 +1,10 @@
-id: fixture-worker-pre-dispatch
-task: Worker pre-dispatch state
-target: Worker dispatch should transition to awaiting-result
-status: running
+id: fixture-worker-awaiting-result
+task: Worker orchestration
+target: Worker returns review result
+status: awaiting-result
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
-current: dispatch worker
+current: wait for worker
 round: 1
 loops_mode: sequential
 execution_mode: spawned-worker
@@ -23,7 +23,7 @@ coordination:
   pending_transition: spawn
   last_cycle_at: 2026-03-11 00:00:00+00:00
   next_expected_wake_at: 2026-03-11 00:06:00+00:00
-  current_wake_job_id: job-ed0
+  current_wake_job_id: job-e1
   next_wake_job_id: null
   watchdog_job_id: jobw
   cleanup_pending: []
@@ -34,27 +34,37 @@ coordination:
   poll_complexity: moderate
   cron_path: native-first-cli-fallback
 loops:
-- id: part1
+- id: loop-existing
   parent: null
   kind: single
   status: running
   round: 1
   funcs:
-  - developer-fix
-  - tester-verify
-  current_func: developer-fix
-  exit_condition: done
+  - review
+  current_func: review
+  exit_condition: review returned
   merge_policy: null
   branches: []
-subagents: []
+subagents:
+- child_session_key: agent:reviewer:telegram:group:-100:topic:1
+  run_id: run-worker-awaiting-result
+  loop_id: loop-existing
+  branch_id: null
+  status: running
+  started_at: 2026-03-11 00:00:00+00:00
+  timeout_at: 2026-03-11 01:00:00+00:00
+  last_checked_at: 2026-03-11 00:01:00+00:00
+  summary: worker is reviewing
+  criteria_assessment: unclear
+  next_action_hint: advance
 progress:
   active_loop_ids:
-  - part1
-  last_subagent_result: null
+  - loop-existing
+  last_subagent_result: worker is reviewing
   last_failure_reason: null
   completed_items: []
   in_progress_items:
-  - developer-fix
+  - review
   commit_refs: []
   test_summary: null
   total_retry_count: 0

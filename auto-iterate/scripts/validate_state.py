@@ -3,13 +3,15 @@ import argparse, json, re, sys
 from pathlib import Path
 import yaml
 
-STATUS = {"running", "awaiting-review", "paused", "complete"}
+STATUS = {"running", "awaiting-result", "paused", "complete"}
 EXECUTION_MODE = {"spawned-worker"}
 PENDING = {"idle", "spawn", "advance", "pause", "complete", "resume"}
 RESUME_MODE = {"none", "quota-auto", "user-resume"}
 BLOCKED_BY = {"none", "claude-quota", "user-input", "repair-failed"}
 POLL_COMPLEXITY = {"trivial", "simple", "moderate", "complex"}
 CRON_PATH = {"native-first-cli-fallback"}
+LOOP_STATUS = {"pending", "running", "paused", "complete"}
+WORKER_STATUS = {"accepted", "running", "success", "no-change", "blocked", "failed", "timed-out", "stalled"}
 ACTIVE_WORKER_STATUSES = {"accepted", "running"}
 
 
@@ -109,6 +111,8 @@ def main():
                     err(errors, f"subagents[{i}] missing: {key}")
             if sub.get("run_id") not in [None] and not isinstance(sub.get("run_id"), str):
                 err(errors, f"subagents[{i}].run_id must be string or null")
+            if sub.get("status") not in WORKER_STATUS:
+                err(errors, f"invalid subagents[{i}].status: {sub.get('status')}")
             if sub.get("status") in ACTIVE_WORKER_STATUSES and not sub.get("run_id"):
                 warnings.append(f"subagents[{i}] active spawned worker has null run_id")
 
@@ -116,6 +120,17 @@ def main():
     if not isinstance(loops, list):
         err(errors, "loops must be a list")
         loops = []
+    else:
+        for i, loop in enumerate(loops):
+            if loop.get("status") not in LOOP_STATUS:
+                err(errors, f"invalid loops[{i}].status: {loop.get('status')}")
+            branches = loop.get("branches", []) or []
+            if not isinstance(branches, list):
+                err(errors, f"loops[{i}].branches must be a list")
+                continue
+            for j, branch in enumerate(branches):
+                if branch.get("status") not in LOOP_STATUS:
+                    err(errors, f"invalid loops[{i}].branches[{j}].status: {branch.get('status')}")
 
     # Lightweight invariants kept here; heavier ones live in validate_protocol.py
     active_subs = [s for s in subs if s.get("status") in ACTIVE_WORKER_STATUSES]

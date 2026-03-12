@@ -1,7 +1,7 @@
 id: fixture-nested
 task: Nested loop review
 target: Child loop completes before parent advances
-status: awaiting-review
+status: awaiting-result
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: child-loop

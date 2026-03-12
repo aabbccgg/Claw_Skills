@@ -14,7 +14,7 @@ Compute the coordinator next-poll delay first with `python3 scripts/compute_next
     "payload": {
       "kind": "agentTurn",
       "timeoutSeconds": 1800,
-      "message": "[auto-iterate] coordinator wake\nIteration: <iteration_id>\nRound: <round>\nStatus: running|awaiting-review|paused|complete\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: <loop_id|none>\nCurrent branch: <branch_id|none>\nSubagents: <active_subagent_refs|[]>\nCurrent wake id: <current_wake_job_id|pending>\nNext action: dispatch|poll|ingest|repair|pause|complete\nReport_to: {channel: <channel>, target: \"<target>\", threadId: \"<thread_id_or_omit>\"}\n⚠️ RULES: ONE CYCLE->END. Native cron first; use exec+openclaw cron only as explicit fallback. Commit state before report. Heavy work stays in worker."
+      "message": "[auto-iterate] coordinator wake\nIteration: <iteration_id>\nRound: <round>\nStatus: running|awaiting-result|paused|complete\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: <loop_id|none>\nCurrent branch: <branch_id|none>\nSubagents: <active_subagent_refs|[]>\nCurrent wake id: <current_wake_job_id|pending>\nNext action: dispatch|poll|ingest|repair|pause|complete\nReport_to: {channel: <channel>, target: \"<target>\", threadId: \"<thread_id_or_omit>\"}\n⚠️ RULES: ONE CYCLE->END. Native cron first; use exec+openclaw cron only as explicit fallback. Commit state before report. Heavy work stays in worker."
     },
     "delivery": {"mode": "none"},
     "sessionTarget": "isolated"
@@ -59,6 +59,19 @@ Return YAML envelope:
 - criteria_assessment: met|not-met|unclear
 - next_action_hint: spawn|advance|pause|complete|retry
 Do not edit orchestration state. Do not schedule cron.
+```
+
+
+## 3a. Agent-profile reuse example
+
+When the user provides an agent identifier, agent name, or profile-like agent reference for a worker role, resolve that profile first and still spawn a fresh isolated worker. Do not reuse a live session.
+
+```text
+User instruction: use agent "frontend-dev" for the developer role
+Resolution: match agent profile "frontend-dev" via runtime-available agent list
+Dispatch action: sessions_spawn(runtime=subagent, agentId="frontend-dev", mode=run, ...)
+Execution mode: spawned-worker
+Rule: reuse the matched static agent profile only; do not inherit live session history
 ```
 
 ## 4. CLI cron fallback examples

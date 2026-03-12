@@ -33,7 +33,7 @@ Reading policy for recovery wakes:
 Treat the chain as broken if any is true:
 - `current_wake_job_id` is null while workflow is non-terminal
 - `now > next_expected_wake_at` by more than one poll interval
-- state says `awaiting-review` but no poll wake exists
+- state says `awaiting-result` but no poll wake exists
 
 Repair sequence:
 1. Add a fresh isolated coordinator wake.
@@ -64,7 +64,7 @@ Suggested handling:
 
 Worker dispatch note:
 - A successful `sessions_spawn(...)` acceptance is dispatch success, not worker completion.
-- A missing final result in the same wake is normal; persist `awaiting-review` and poll later.
+- A missing final result in the same wake is normal; persist `awaiting-result` and poll later.
 - Do not rewrite state to `dispatch failed` after a worker was successfully spawned and recorded.
 
 Pause if retries are exhausted for the active branch or loop.
@@ -77,7 +77,7 @@ Watchdog checks:
 - `last_cycle_at` freshness
 - overdue `next_expected_wake_at`
 - missing `current_wake_job_id`
-- stale `awaiting-review` with no recent `last_checked_at` on active workers
+- stale `awaiting-result` with no recent `last_checked_at` on active workers
 - repeated cleanup failures in `cleanup_pending[]`
 
 Watchdog repair rules:

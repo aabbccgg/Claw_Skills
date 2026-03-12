@@ -14,7 +14,7 @@ FIXTURES = [
     ROOT / 'scripts' / 'fixtures' / 'complete.yaml',
     ROOT / 'scripts' / 'fixtures' / 'nested.yaml',
     ROOT / 'scripts' / 'fixtures' / 'parallel.yaml',
-    ROOT / 'scripts' / 'fixtures' / 'worker-awaiting-review.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'worker-awaiting-result.yaml',
     ROOT / 'scripts' / 'fixtures' / 'watchdog-repair.yaml',
     ROOT / 'scripts' / 'fixtures' / 'final-report-retry.yaml',
     ROOT / 'scripts' / 'fixtures' / 'branch-worker-conflict.yaml',
@@ -25,6 +25,7 @@ FIXTURES = [
     ROOT / 'scripts' / 'fixtures' / 'no-dispatch-no-reschedule.yaml',
     ROOT / 'scripts' / 'fixtures' / 'repair-verification-incomplete.yaml',
     ROOT / 'scripts' / 'fixtures' / 'worker-dispatch-accepted.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'profile-reuse-dispatch-accepted.yaml',
     ROOT / 'scripts' / 'fixtures' / 'worker-dispatch-timeout-misclassified.yaml',
     ROOT / 'scripts' / 'fixtures' / 'worker-result-ready.yaml',
     ROOT / 'scripts' / 'fixtures' / 'worker-redundant-redispatch.yaml',
@@ -50,10 +51,10 @@ MODE_OVERRIDES = {
 
 
 DOC_CONTRACTS = [
-    (ROOT / 'SKILL.md', ['Cron path:', 'native cron first', 'CLI fallback second']),
+    (ROOT / 'SKILL.md', ['Cron path:', 'native cron first', 'CLI fallback second', 'agent-profile selection', 'Spawn an isolated worker that reuses the matched agent profile']),
     (ROOT / 'references' / 'script-interfaces.md', ['Cron path:', 'native cron first', 'openclaw cron', 'CLI fallback second']),
     (ROOT / 'references' / 'recovery.md', ['Cron path is native first', 'CLI fallback second', 'openclaw cron']),
-    (ROOT / 'references' / 'examples.md', ['Cron path is native first', 'CLI fallback second', '--session isolated', '--no-deliver', '--agent <own_agent_id>', 'openclaw cron remove <job-id>']),
+    (ROOT / 'references' / 'examples.md', ['Cron path is native first', 'CLI fallback second', '--session isolated', '--no-deliver', '--agent <own_agent_id>', 'openclaw cron remove <job-id>', 'Agent-profile reuse example', 'Do not reuse a live session']),
     (ROOT / 'references' / 'state-schema.md', ['cron_path: native-first-cli-fallback']),
 ]
 
@@ -79,7 +80,7 @@ def render_mode_for_state(state: dict, fixture_name: str) -> str:
         return 'repair'
     return {
         'running': 'progress',
-        'awaiting-review': 'progress',
+        'awaiting-result': 'progress',
         'paused': 'pause',
         'complete': 'final',
     }[state['status']]
@@ -119,6 +120,24 @@ def main():
                 'expected_ok': True,
                 'stdout': fixture_cron_path or '',
                 'stderr': f'fixture cron_path mismatch: expected {EXPECTED_CRON_PATH}',
+            })
+        if fixture.name == 'profile-reuse-dispatch-accepted.yaml':
+            subagents = state.get('subagents') or []
+            first = subagents[0] if subagents else {}
+            ok = (
+                state.get('execution_mode') == 'spawned-worker'
+                and bool(first.get('run_id'))
+                and 'subagent' in str(first.get('child_session_key') or '')
+                and 'named agent profile' in str((state.get('progress') or {}).get('last_subagent_result') or '').lower()
+            )
+            results.append({
+                'fixture': fixture.name,
+                'status': status,
+                'command': 'fixture profile-reuse invariant',
+                'ok': ok,
+                'expected_ok': True,
+                'stdout': str(first.get('child_session_key') or ''),
+                'stderr': '' if ok else 'profile-reuse fixture must stay spawned-worker with fresh subagent run_id and profile-resolution evidence',
             })
         commands = [
             ['python3', str(ROOT / 'scripts' / 'validate_state.py'), str(fixture)],
