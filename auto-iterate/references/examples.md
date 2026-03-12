@@ -2,17 +2,19 @@
 
 ## 1. Coordinator wake cron.add payload
 
+Compute the next poll delay first with `python3 scripts/compute_next_poll.py --state-path /abs/path/STATE.md --json`, then fill the one-shot wake time dynamically. 
+
 ```json
 {
   "action": "add",
   "job": {
     "name": "auto-iterate-coordinator-wake",
-    "schedule": {"kind": "at", "at": "2026-03-10T05:20:00Z"},
+    "schedule": {"kind": "at", "at": "<computed-next-wake-at-iso>"},
     "agentId": "<own_agent_id>",
     "payload": {
       "kind": "agentTurn",
       "timeoutSeconds": 1800,
-      "message": "[auto-iterate] coordinator wake\nIteration: iter-20260310-130200\nRound: 3\nStatus: awaiting-review\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: refine-code\nCurrent branch: backend\nSubagents: [child:abc]\nCurrent wake id: job_123\nNext action: poll\nReport_to: {channel: telegram, target: \"-100123\", threadId: \"17\"}\n⚠️ RULES: ONE CYCLE->END. Native cron first; use exec+openclaw cron only as explicit fallback. Commit state before report. Heavy work stays in worker."
+      "message": "[auto-iterate] coordinator wake\nIteration: <iteration_id>\nRound: <round>\nStatus: running|awaiting-review|paused|complete\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: <loop_id|none>\nCurrent branch: <branch_id|none>\nSubagents: <active_subagent_refs|[]>\nCurrent wake id: <current_wake_job_id|pending>\nNext action: dispatch|poll|ingest|repair|pause|complete\nReport_to: {channel: <channel>, target: \"<target>\", threadId: \"<thread_id_or_omit>\"}\n⚠️ RULES: ONE CYCLE->END. Native cron first; use exec+openclaw cron only as explicit fallback. Commit state before report. Heavy work stays in worker."
     },
     "delivery": {"mode": "none"},
     "sessionTarget": "isolated"
@@ -44,12 +46,12 @@
 
 ```text
 Task: Execute one branch of the iteration.
-Iteration: iter-20260310-130200
-Loop: refine-code
-Branch: backend
+Iteration: <iteration_id>
+Loop: <loop_id>
+Branch: <branch_id>
 State path: /abs/path/STATE.md (read-only)
 Workdir: /abs/workdir
-Target: tests pass and review comments resolved
+Target: <exit_condition|branch_goal>
 Return YAML envelope:
 - status: success|no-change|blocked|failed
 - summary: short text
@@ -61,14 +63,14 @@ Do not edit orchestration state. Do not schedule cron.
 
 ## 4. CLI cron fallback examples
 
-Cron path is native first, CLI fallback second. Use these only when the native `cron` tool is unavailable but `exec` can run `openclaw cron ...`. The flags below match the current OpenClaw CLI shape (`openclaw cron add --help`).
+Cron path is native first, CLI fallback second. Use these only when the native `cron` tool is unavailable but `exec` can run `openclaw cron ...`. Compute the coordinator delay first with `python3 scripts/compute_next_poll.py --state-path /abs/path/STATE.md --json`, derive `<computed-next-wake-at-iso>`, and then fill the CLI flags dynamically. The flags below match the current OpenClaw CLI shape (`openclaw cron add --help`).
 
 ```bash
 # Add one-shot coordinator wake
 WAKE_MESSAGE="$(cat /abs/path/wake-message.txt)"
 openclaw cron add \
   --name auto-iterate-coordinator-wake \
-  --at 2026-03-10T05:20:00Z \
+  --at <computed-next-wake-at-iso> \
   --session isolated \
   --agent <own_agent_id> \
   --no-deliver \
