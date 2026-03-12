@@ -7,7 +7,7 @@ workdir: /tmp/project
 current: awaiting worker result ingest
 round: 2
 loops_mode: sequential
-execution_mode: existing-agent
+execution_mode: spawned-worker
 origin:
   session_kind: interactive-dm
   session_id: main
@@ -48,7 +48,7 @@ loops:
   branches: []
 subagents:
 - child_session_key: agent:developer:topic:50
-  run_id: null
+  run_id: run-ingest-only-recovery
   loop_id: loop-ingest
   branch_id: null
   status: success

@@ -1,5 +1,5 @@
-id: fixture-existing-agent-dispatch-timeout-misclassified
-task: Existing agent timeout misclassified
+id: fixture-worker-dispatch-timeout-misclassified
+task: Worker dispatch timeout misclassified
 target: Validator should reject dispatch-failed misclassification
 status: running
 started_at: 2026-03-11 00:00:00+00:00
@@ -7,7 +7,7 @@ workdir: /tmp/project
 current: retry dispatch
 round: 1
 loops_mode: sequential
-execution_mode: existing-agent
+execution_mode: spawned-worker
 origin:
   session_kind: interactive-dm
   session_id: main
@@ -48,7 +48,7 @@ loops:
   branches: []
 subagents:
 - child_session_key: agent:developer:telegram:group:-100:topic:50
-  run_id: null
+  run_id: run-worker-dispatch-timeout-misclassified
   loop_id: part1
   branch_id: null
   status: accepted

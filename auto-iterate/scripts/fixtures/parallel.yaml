@@ -1,7 +1,7 @@
 id: fixture-parallel
 task: Parallel branch work
 target: Merge after branches satisfy policy
-status: running
+status: awaiting-review
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: branch-a
@@ -20,7 +20,7 @@ coordination:
   state_version: 4
   writer_session: main
   lease_expires_at: 2026-03-11 00:02:00+00:00
-  pending_transition: advance
+  pending_transition: idle
   last_cycle_at: 2026-03-11 00:00:00+00:00
   next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-p1

@@ -8,29 +8,29 @@ SCRIPT = ROOT / 'scripts' / 'check_transition.py'
 
 CASES = [
     {
-        'name': 'existing-agent pre-dispatch -> awaiting-review',
-        'fixture': ROOT / 'scripts' / 'fixtures' / 'existing-agent-pre-dispatch.yaml',
+        'name': 'worker pre-dispatch -> awaiting-review',
+        'fixture': ROOT / 'scripts' / 'fixtures' / 'worker-pre-dispatch.yaml',
         'event': 'worker-dispatched',
         'to': 'awaiting-review',
         'expect_ok': True,
     },
     {
-        'name': 'existing-agent result -> running',
-        'fixture': ROOT / 'scripts' / 'fixtures' / 'existing-agent-result-ready.yaml',
+        'name': 'worker result -> running',
+        'fixture': ROOT / 'scripts' / 'fixtures' / 'worker-result-ready.yaml',
         'event': 'worker-result',
         'to': 'running',
         'expect_ok': True,
     },
     {
         'name': 'alias result-ingested rejected',
-        'fixture': ROOT / 'scripts' / 'fixtures' / 'existing-agent-result-ready.yaml',
+        'fixture': ROOT / 'scripts' / 'fixtures' / 'worker-result-ready.yaml',
         'event': 'result-ingested',
         'to': 'running',
         'expect_ok': False,
     },
     {
         'name': 'alias dispatch rejected',
-        'fixture': ROOT / 'scripts' / 'fixtures' / 'existing-agent-pre-dispatch.yaml',
+        'fixture': ROOT / 'scripts' / 'fixtures' / 'worker-pre-dispatch.yaml',
         'event': 'dispatch',
         'to': 'awaiting-review',
         'expect_ok': False,

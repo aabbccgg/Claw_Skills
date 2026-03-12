@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 
 STATUS = {"running", "awaiting-review", "paused", "complete"}
-EXECUTION_MODE = {"spawned-worker", "existing-agent"}
+EXECUTION_MODE = {"spawned-worker"}
 PENDING = {"idle", "spawn", "advance", "pause", "complete", "resume"}
 RESUME_MODE = {"none", "quota-auto", "user-resume"}
 BLOCKED_BY = {"none", "claude-quota", "user-input", "repair-failed"}
@@ -107,9 +107,9 @@ def main():
             for key in ["child_session_key", "run_id", "loop_id", "branch_id", "status", "started_at", "timeout_at", "last_checked_at", "summary", "criteria_assessment", "next_action_hint"]:
                 if key not in sub:
                     err(errors, f"subagents[{i}] missing: {key}")
-            if data.get("execution_mode") == "existing-agent" and sub.get("run_id", "x") not in [None] and not isinstance(sub.get("run_id"), str):
+            if sub.get("run_id") not in [None] and not isinstance(sub.get("run_id"), str):
                 err(errors, f"subagents[{i}].run_id must be string or null")
-            if data.get("execution_mode") == "spawned-worker" and sub.get("status") in ACTIVE_WORKER_STATUSES and not sub.get("run_id"):
+            if sub.get("status") in ACTIVE_WORKER_STATUSES and not sub.get("run_id"):
                 warnings.append(f"subagents[{i}] active spawned worker has null run_id")
 
     loops = data.get("loops", [])

@@ -7,7 +7,7 @@ workdir: /tmp/project
 current: missing worker for current step
 round: 2
 loops_mode: sequential
-execution_mode: existing-agent
+execution_mode: spawned-worker
 origin:
   session_kind: interactive-dm
   session_id: main

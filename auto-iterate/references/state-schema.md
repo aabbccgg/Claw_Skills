@@ -12,7 +12,7 @@ workdir: <absolute path>
 current: <short human-readable current action>
 round: <int>
 loops_mode: sequential|parallel
-execution_mode: spawned-worker|existing-agent
+execution_mode: spawned-worker
 
 origin:
   session_kind: interactive-dm|interactive-group|isolated-cron
@@ -65,7 +65,7 @@ loops:
 
 subagents:
   - child_session_key: <session key>
-    run_id: <run id or null for existing-agent mode>
+    run_id: <run id or null>
     loop_id: <loop id>
     branch_id: <branch id or null>
     status: accepted|running|success|no-change|blocked|failed|timed-out|stalled
@@ -101,7 +101,7 @@ cleanup:
 
 ## Field notes
 
-- `execution_mode` records the selected orchestration mode. Prefer `spawned-worker`; use `existing-agent` only when visibility and policy constraints are explicitly satisfied.
+- `execution_mode` records the selected orchestration mode. This skill uses `spawned-worker` only, including cases where a fresh worker reuses a matched agent profile.
 - `coordination.writer_session` + `lease_expires_at` implement the single-writer lease.
 - `coordination.next_wake_job_id` exists only during add-before-remove handoff.
 - `coordination.cleanup_pending[]` retains obsolete wake ids that still need removal.
@@ -111,8 +111,8 @@ cleanup:
 - `coordination.alert_needed` is cleared by the coordinator during PERSIST in the same cycle that emits the repair alert during REPORT.
 - `coordination.alert_sent` prevents duplicate watchdog repair alerts when the watchdog uses the narrow direct-alert exception.
 - `progress.active_loop_ids` is the canonical active-loop path used for resume.
-- `progress.last_failure_reason` stores the latest orchestration or worker-mode failure reason, including existing-agent fallback causes.
-- Existing-agent enqueue success must move the workflow to `awaiting-review` with a `subagents[]` record in `accepted` or `running` state; lack of same-wake final result is not itself a failure.
+- `progress.last_failure_reason` stores the latest orchestration or worker-mode failure reason.
+- Worker dispatch success must move the workflow to `awaiting-review` with a `subagents[]` record in `accepted` or `running` state; lack of same-wake final result is not itself a failure.
 - `progress.completed_items`, `progress.in_progress_items`, `progress.commit_refs`, and `progress.test_summary` are optional presentation fields consumed by `scripts/render_progress.py`.
 - `progress.pending_reports` is an optional queue of owed user-visible reports (especially milestone updates). Each item should use `{type, key, summary}` so the coordinator can render it and then clear it after successful delivery.
 - `cleanup.*` makes terminal reporting and wake removal idempotent.

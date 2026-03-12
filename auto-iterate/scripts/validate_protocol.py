@@ -84,18 +84,17 @@ def main():
     if completed_or_terminal_workers and status == 'running' and coord.get('pending_transition') == 'spawn':
         warnings.append('completed worker result exists while state still points at spawn; prefer ingest-only recovery')
 
-    # Existing-agent dispatch/result invariants.
-    if state.get('execution_mode') == 'existing-agent':
-        if active_workers and status != 'awaiting-review':
-            errors.append('existing-agent dispatch with accepted/running worker must use status=awaiting-review')
-        lfr = (progress.get('last_failure_reason') or '').lower()
-        current = (state.get('current') or '').lower()
-        if active_workers and 'dispatch failed' in lfr:
-            errors.append('dispatch failure is misclassified: existing-agent worker already accepted/running')
-        if active_workers and 'retry dispatch' in current:
-            errors.append('redundant redispatch detected while existing-agent worker is already accepted/running')
-        if completed_or_terminal_workers and coord.get('pending_transition') == 'spawn':
-            warnings.append('existing-agent workflow still marked for spawn even though a worker result already exists')
+    # Worker dispatch/result invariants.
+    if active_workers and status != 'awaiting-review':
+        errors.append('worker dispatch with accepted/running worker must use status=awaiting-review')
+    lfr = (progress.get('last_failure_reason') or '').lower()
+    current = (state.get('current') or '').lower()
+    if active_workers and 'dispatch failed' in lfr:
+        errors.append('dispatch failure is misclassified: worker already accepted/running')
+    if active_workers and 'retry dispatch' in current:
+        errors.append('redundant redispatch detected while a worker is already accepted/running')
+    if completed_or_terminal_workers and coord.get('pending_transition') == 'spawn':
+        warnings.append('workflow still marked for spawn even though a worker result already exists')
 
     # Repair verification completeness.
     if coord.get('alert_needed'):
@@ -140,11 +139,6 @@ def main():
             count = sum(1 for s in subs if s.get('loop_id') == loop.get('id') and s.get('branch_id') == bid and s.get('status') in ACTIVE)
             if count > 1:
                 errors.append(f'loop {loop.get("id")} branch {bid} has multiple active workers')
-
-    if state.get('execution_mode') == 'existing-agent':
-        bad = [s for s in subs if s.get('run_id') not in {None} and not isinstance(s.get('run_id'), str)]
-        if bad:
-            errors.append('existing-agent mode allows run_id null or string only')
 
     result = {'ok': not errors, 'errors': errors, 'warnings': warnings}
     if args.json:

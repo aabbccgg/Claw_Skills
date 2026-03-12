@@ -1,13 +1,13 @@
-id: fixture-existing-agent
-task: Existing agent orchestration
-target: Existing agent returns review result
-status: awaiting-review
+id: fixture-worker-redundant-redispatch
+task: Worker redundant redispatch
+target: Validator should reject redispatch while worker is awaiting review
+status: running
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
-current: wait for existing agent
+current: retry dispatch despite accepted worker
 round: 1
 loops_mode: sequential
-execution_mode: existing-agent
+execution_mode: spawned-worker
 origin:
   session_kind: interactive-dm
   session_id: main
@@ -17,13 +17,13 @@ origin:
     threadId: null
   report_context_locked: true
 coordination:
-  state_version: 3
+  state_version: 5
   writer_session: main
   lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: spawn
   last_cycle_at: 2026-03-11 00:00:00+00:00
   next_expected_wake_at: 2026-03-11 00:06:00+00:00
-  current_wake_job_id: job-e1
+  current_wake_job_id: job-rr1
   next_wake_job_id: null
   watchdog_job_id: jobw
   cleanup_pending: []
@@ -34,37 +34,38 @@ coordination:
   poll_complexity: moderate
   cron_path: native-first-cli-fallback
 loops:
-- id: loop-existing
+- id: part1
   parent: null
   kind: single
   status: running
   round: 1
   funcs:
-  - review
-  current_func: review
-  exit_condition: review returned
+  - developer-fix
+  - tester-verify
+  current_func: developer-fix
+  exit_condition: done
   merge_policy: null
   branches: []
 subagents:
-- child_session_key: agent:reviewer:telegram:group:-100:topic:1
-  run_id: null
-  loop_id: loop-existing
+- child_session_key: agent:developer:telegram:group:-100:topic:50
+  run_id: run-worker-redundant-redispatch
+  loop_id: part1
   branch_id: null
-  status: running
+  status: accepted
   started_at: 2026-03-11 00:00:00+00:00
   timeout_at: 2026-03-11 01:00:00+00:00
-  last_checked_at: 2026-03-11 00:01:00+00:00
-  summary: existing agent is reviewing
+  last_checked_at: null
+  summary: handoff queued
   criteria_assessment: unclear
   next_action_hint: advance
 progress:
   active_loop_ids:
-  - loop-existing
-  last_subagent_result: existing agent is reviewing
-  last_failure_reason: null
+  - part1
+  last_subagent_result: handoff already queued
+  last_failure_reason: retry dispatching despite existing accepted worker
   completed_items: []
   in_progress_items:
-  - review
+  - developer-fix
   commit_refs: []
   test_summary: null
   total_retry_count: 0

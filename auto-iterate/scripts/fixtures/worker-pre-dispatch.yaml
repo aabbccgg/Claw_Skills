@@ -1,13 +1,13 @@
-id: fixture-existing-agent-dispatch-accepted
-task: Existing agent dispatch accepted
-target: Dispatch should move workflow to awaiting-review
-status: awaiting-review
+id: fixture-worker-pre-dispatch
+task: Worker pre-dispatch state
+target: Worker dispatch should transition to awaiting-review
+status: running
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
-current: wait for existing agent result
+current: dispatch worker
 round: 1
 loops_mode: sequential
-execution_mode: existing-agent
+execution_mode: spawned-worker
 origin:
   session_kind: interactive-dm
   session_id: main
@@ -17,13 +17,13 @@ origin:
     threadId: null
   report_context_locked: true
 coordination:
-  state_version: 4
+  state_version: 3
   writer_session: main
   lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: spawn
   last_cycle_at: 2026-03-11 00:00:00+00:00
   next_expected_wake_at: 2026-03-11 00:06:00+00:00
-  current_wake_job_id: job-e2
+  current_wake_job_id: job-ed0
   next_wake_job_id: null
   watchdog_job_id: jobw
   cleanup_pending: []
@@ -46,22 +46,11 @@ loops:
   exit_condition: done
   merge_policy: null
   branches: []
-subagents:
-- child_session_key: agent:developer:telegram:group:-100:topic:50
-  run_id: null
-  loop_id: part1
-  branch_id: null
-  status: accepted
-  started_at: 2026-03-11 00:00:00+00:00
-  timeout_at: 2026-03-11 01:00:00+00:00
-  last_checked_at: null
-  summary: handoff queued
-  criteria_assessment: unclear
-  next_action_hint: advance
+subagents: []
 progress:
   active_loop_ids:
   - part1
-  last_subagent_result: developer handoff queued
+  last_subagent_result: null
   last_failure_reason: null
   completed_items: []
   in_progress_items:

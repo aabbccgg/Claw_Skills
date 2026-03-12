@@ -1,7 +1,7 @@
 id: fixture-running
 task: Fix and verify one loop
 target: Tests pass and review criteria met
-status: running
+status: awaiting-review
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: wait for developer completion
@@ -20,7 +20,7 @@ coordination:
   state_version: 2
   writer_session: main
   lease_expires_at: 2026-03-11 00:02:00+00:00
-  pending_transition: advance
+  pending_transition: idle
   last_cycle_at: 2026-03-11 00:00:00+00:00
   next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job1
@@ -37,7 +37,7 @@ loops:
 - id: loop-a
   parent: null
   kind: single
-  status: running
+  status: awaiting-review
   round: 2
   funcs:
   - dev

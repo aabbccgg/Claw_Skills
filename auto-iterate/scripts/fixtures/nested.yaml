@@ -1,7 +1,7 @@
 id: fixture-nested
 task: Nested loop review
 target: Child loop completes before parent advances
-status: running
+status: awaiting-review
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: child-loop
@@ -20,7 +20,7 @@ coordination:
   state_version: 5
   writer_session: main
   lease_expires_at: 2026-03-11 00:02:00+00:00
-  pending_transition: advance
+  pending_transition: idle
   last_cycle_at: 2026-03-11 00:00:00+00:00
   next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-n1

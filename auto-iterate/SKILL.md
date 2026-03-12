@@ -27,12 +27,10 @@ Start only when all are true:
 
 Before starting any automatic iterative workflow, ask the user for clarification if the loop body, parallel loops, nested loops, or the task itself contains ambiguity, unclear logic, missing decisions, or conflicting instructions. Do not start the automated iteration until those ambiguities are resolved.
 
-Modes:
-- **Spawned-worker mode** — default and preferred. Requires `cron`, `message`, `sessions_spawn`, `sessions_history`. Use `sessions_spawn(..., runTimeoutSeconds=1800)` unless a shorter worker budget is explicitly justified.
-- **Existing-agent mode** — optional and best-effort. Requires `sessions_send`, `sessions_history` visibility to the target session, and a dedicated automation-safe target session.
+Mode:
+- **Spawned-worker mode** — required. Requires `cron`, `message`, `sessions_spawn`, `sessions_history`. Use `sessions_spawn(..., runTimeoutSeconds=1800)` unless a shorter worker budget is explicitly justified.
 
 Fallback:
-- If existing-agent mode is unavailable, use spawned-worker mode.
 - If spawned-worker mode is unavailable, do not start automatic iteration.
 
 Always initialize every canonical schema field explicitly. Do not rely on implicit defaults.
@@ -42,7 +40,7 @@ Always initialize every canonical schema field explicitly. Do not rely on implic
 Use exactly these actors:
 - **Origin session** — validate inputs, persist routing, initialize state, install coordinator wake and watchdog, send kickoff.
 - **Coordinator** — an isolated cron wake only. Sole writer to `STATE.md`. Sole authority to transition state, monitor workers, schedule wakes, and send user-visible updates.
-- **Worker** — spawned subagent by default; existing agent only when explicitly allowed by the mode rules. Never edits orchestration state.
+- **Worker** — spawned subagent only. Never edits orchestration state.
 - **Watchdog** — isolated recurring cron wake that repairs liveness only.
 
 Never let a human-facing chat session become the long-running coordinator after init.
@@ -74,7 +72,7 @@ Persist `origin.report_to` on init and never rewrite it.
 
 The coordinator sends progress, milestone, pause, resume, repair, and completion messages directly to `origin.report_to` via `message(action="send")`.
 
-Do not let workers, existing agents, or watchdog send user-visible progress directly, except for the narrow watchdog emergency exception defined in `references/recovery.md`.
+Do not let workers or watchdog send user-visible progress directly, except for the narrow watchdog emergency exception defined in `references/recovery.md`.
 
 Use `scripts/render_progress.py` to generate user-visible messages from committed state. Keep the progress message minimal: header + optional milestone + optional worker status + in-progress summary + next action + next check. 
 
@@ -120,30 +118,29 @@ If the wake reached END without real progress and without a durable successor wa
 
 Use `references/flow.md` as the binding source for the explicit state machine, canonical transition vocabulary, loop progression semantics, and dead-loop policy.
 
-## 7. Prefer spawned workers
+## 7. Use spawned workers only
 
-Default worker path:
+Worker path:
 - Spawn via `sessions_spawn`.
 - Track in `subagents[]`.
 - Poll via `sessions_history`.
 - Treat auto-announces as best-effort diagnostics only.
 
-Existing-agent mode is allowed only when all are true:
-- Session key is already known.
-- `tools.sessions.visibility` and tool policy allow `sessions_history` for that session.
-- The target session is dedicated and automation-safe.
-- The target can be instructed not to send direct user-facing progress.
-- The target can be instructed to minimize reply-back ping-pong and suppress direct announce behavior.
+If the user provides an agent identifier, agent name, or profile-like agent reference for a worker role, resolve that request as an agent-profile selection. Spawn an isolated worker that reuses the matched agent profile (`agentId`, default model, and static persona).
 
-`sessions_send` is not a silent RPC primitive. It may trigger reply-back ping-pong and a target-side announce step. Use it as an enqueue operation only: `sessions_send(..., timeoutSeconds=0)`. Do not use same-wake synchronous waiting as the normal control path.
+Agent-profile reuse rules:
+- Inspect the runtime-available agent list (for example via `agents_list`) or the user's explicitly named agent identifiers and resolve the requested worker profile dynamically.
+- Reuse only the static agent profile for the fresh spawned worker. Do not inherit live session history, pending tasks, or transient context.
+- If the requested profile match is ambiguous, unclear, missing, or conflicts with the task structure, ask the user for clarification before starting the automated iteration. Do not silently guess.
+- A user-provided agent identifier, agent name, or profile reference for a worker role overrides the default generic spawned-worker choice, but it still resolves to a fresh spawned worker with the matched profile.
 
-Existing-agent dispatch contract:
+Worker dispatch contract:
 - Dispatch in one wake.
 - Validate `running --worker-dispatched--> awaiting-review`.
 - Immediately persist worker-dispatched state: `status=awaiting-review`, `subagents[].status=accepted`, `started_at`, and worker session metadata.
 - Schedule the successor wake and END.
 - In later wakes, ingest results only via `sessions_history` and validate `awaiting-review --worker-result--> running|paused|complete`.
-- `sessions_send timeout` must not be interpreted as dispatch failure if the handoff was already queued.
+- Lack of a same-wake final result is normal. Do not misclassify dispatch as failure after a worker was successfully spawned and recorded.
 
 ## 8. Keep the watchdog alive until reporting is done
 

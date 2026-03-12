@@ -7,7 +7,7 @@ workdir: /tmp/project
 current: explanatory recap only
 round: 1
 loops_mode: sequential
-execution_mode: existing-agent
+execution_mode: spawned-worker
 origin:
   session_kind: interactive-group
   session_id: main

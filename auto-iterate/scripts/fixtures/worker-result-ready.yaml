@@ -1,13 +1,13 @@
-id: fixture-existing-agent-result-ready
-task: Existing agent result ready to ingest
+id: fixture-worker-result-ready
+task: Worker result ready to ingest
 target: Coordinator should ingest and advance instead of redispatching
 status: awaiting-review
 started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
-current: ingest existing agent result
+current: ingest worker result
 round: 1
 loops_mode: sequential
-execution_mode: existing-agent
+execution_mode: spawned-worker
 origin:
   session_kind: interactive-dm
   session_id: main
@@ -48,7 +48,7 @@ loops:
   branches: []
 subagents:
 - child_session_key: agent:developer:telegram:group:-100:topic:50
-  run_id: null
+  run_id: run-worker-result-ready
   loop_id: part1
   branch_id: null
   status: success
@@ -61,7 +61,7 @@ subagents:
 progress:
   active_loop_ids:
   - part1
-  last_subagent_result: existing-agent returned met/advance envelope
+  last_subagent_result: worker returned met/advance envelope
   last_failure_reason: null
   completed_items:
   - part1-ready
