@@ -17,7 +17,7 @@ Run in this order on every isolated coordinator wake:
 7. If `coordination.alert_needed: true`, preserve it for the next recovered coordinator REPORT step; the coordinator clears it during PERSIST in the same cycle that emits the `⚠️` repair alert during REPORT.
 8. Evaluate progress and choose exactly one next transition.
 9. Persist full state.
-10. Schedule successor wake if still non-terminal.
+10. Schedule the successor wake if still non-terminal.
 11. Remove old wake ids only after the replacement wake is durable.
 12. Report from committed state. If `progress.pending_reports` contains a queued milestone or repair update, emit that first.
 13. If a queued pending report was delivered successfully, persist queue cleanup before END.

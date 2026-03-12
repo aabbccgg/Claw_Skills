@@ -62,7 +62,7 @@ progress:
   active_loop_ids:
   - part1
   last_subagent_result: dispatch timeout while waiting synchronously
-  last_failure_reason: developer dispatch failed; retry dispatch next wake
+  last_failure_reason: developer dispatch failed; retry dispatch on successor wake
   completed_items: []
   in_progress_items:
   - developer-fix

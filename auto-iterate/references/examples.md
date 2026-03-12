@@ -2,14 +2,14 @@
 
 ## 1. Coordinator wake cron.add payload
 
-Compute the next poll delay first with `python3 scripts/compute_next_poll.py --state-path /abs/path/STATE.md --json`, then fill the one-shot wake time dynamically. 
+Compute the coordinator next-poll delay first with `python3 scripts/compute_next_poll.py --state-path /abs/path/STATE.md --json`, then fill the successor wake time dynamically.
 
 ```json
 {
   "action": "add",
   "job": {
     "name": "auto-iterate-coordinator-wake",
-    "schedule": {"kind": "at", "at": "<computed-next-wake-at-iso>"},
+    "schedule": {"kind": "at", "at": "<computed-successor-wake-at-iso>"},
     "agentId": "<own_agent_id>",
     "payload": {
       "kind": "agentTurn",
@@ -63,14 +63,14 @@ Do not edit orchestration state. Do not schedule cron.
 
 ## 4. CLI cron fallback examples
 
-Cron path is native first, CLI fallback second. Use these only when the native `cron` tool is unavailable but `exec` can run `openclaw cron ...`. Compute the coordinator delay first with `python3 scripts/compute_next_poll.py --state-path /abs/path/STATE.md --json`, derive `<computed-next-wake-at-iso>`, and then fill the CLI flags dynamically. The flags below match the current OpenClaw CLI shape (`openclaw cron add --help`).
+Cron path is native first, CLI fallback second. Use these only when the native `cron` tool is unavailable but `exec` can run `openclaw cron ...`. Compute the coordinator next-poll delay first with `python3 scripts/compute_next_poll.py --state-path /abs/path/STATE.md --json`, then fill the successor wake time dynamically.. The flags below match the current OpenClaw CLI shape (`openclaw cron add --help`).
 
 ```bash
 # Add one-shot coordinator wake
 WAKE_MESSAGE="$(cat /abs/path/wake-message.txt)"
 openclaw cron add \
   --name auto-iterate-coordinator-wake \
-  --at <computed-next-wake-at-iso> \
+  --at <computed-successor-wake-at-iso> \
   --session isolated \
   --agent <own_agent_id> \
   --no-deliver \
