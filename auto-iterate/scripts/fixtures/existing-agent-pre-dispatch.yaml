@@ -2,7 +2,7 @@ id: fixture-existing-agent-pre-dispatch
 task: Existing agent pre-dispatch state
 target: Dispatch should transition to awaiting-review
 status: running
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: dispatch existing agent worker
 round: 1
@@ -19,10 +19,10 @@ origin:
 coordination:
   state_version: 3
   writer_session: main
-  lease_expires_at: 2026-03-11T00:02:00Z
+  lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: spawn
-  last_cycle_at: 2026-03-11T00:00:00Z
-  next_expected_wake_at: 2026-03-11T00:06:00Z
+  last_cycle_at: 2026-03-11 00:00:00+00:00
+  next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-ed0
   next_wake_job_id: null
   watchdog_job_id: jobw
@@ -32,24 +32,29 @@ coordination:
   alert_sent: false
   poll_streak: 0
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: part1
-    parent: null
-    kind: single
-    status: running
-    round: 1
-    funcs: [developer-fix, tester-verify]
-    current_func: developer-fix
-    exit_condition: done
-    merge_policy: null
-    branches: []
+- id: part1
+  parent: null
+  kind: single
+  status: running
+  round: 1
+  funcs:
+  - developer-fix
+  - tester-verify
+  current_func: developer-fix
+  exit_condition: done
+  merge_policy: null
+  branches: []
 subagents: []
 progress:
-  active_loop_ids: [part1]
+  active_loop_ids:
+  - part1
   last_subagent_result: null
   last_failure_reason: null
   completed_items: []
-  in_progress_items: [developer-fix]
+  in_progress_items:
+  - developer-fix
   commit_refs: []
   test_summary: null
   total_retry_count: 0

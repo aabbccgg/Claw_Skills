@@ -12,7 +12,7 @@
     "payload": {
       "kind": "agentTurn",
       "timeoutSeconds": 1800,
-      "message": "[auto-iterate] coordinator wake\nIteration: iter-20260310-130200\nRound: 3\nStatus: awaiting-review\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: refine-code\nCurrent branch: backend\nSubagents: [child:abc]\nCurrent wake id: job_123\nNext action: poll\nReport_to: {channel: telegram, target: \"-100123\", threadId: \"17\"}\n⚠️ RULES: ONE CYCLE->END. Use cron tool, not shell. Commit state before report. Heavy work stays in worker."
+      "message": "[auto-iterate] coordinator wake\nIteration: iter-20260310-130200\nRound: 3\nStatus: awaiting-review\nState path: /abs/path/STATE.md\nWorkdir: /abs/workdir\nCurrent loop: refine-code\nCurrent branch: backend\nSubagents: [child:abc]\nCurrent wake id: job_123\nNext action: poll\nReport_to: {channel: telegram, target: \"-100123\", threadId: \"17\"}\n⚠️ RULES: ONE CYCLE->END. Native cron first; use exec+openclaw cron only as explicit fallback. Commit state before report. Heavy work stays in worker."
     },
     "delivery": {"mode": "none"},
     "sessionTarget": "isolated"
@@ -59,7 +59,40 @@ Return YAML envelope:
 Do not edit orchestration state. Do not schedule cron.
 ```
 
-## 4. Script invocation examples
+## 4. CLI cron fallback examples
+
+Cron path is native first, CLI fallback second. Use these only when the native `cron` tool is unavailable but `exec` can run `openclaw cron ...`. The flags below match the current OpenClaw CLI shape (`openclaw cron add --help`).
+
+```bash
+# Add one-shot coordinator wake
+WAKE_MESSAGE="$(cat /abs/path/wake-message.txt)"
+openclaw cron add \
+  --name auto-iterate-coordinator-wake \
+  --at 2026-03-10T05:20:00Z \
+  --session isolated \
+  --agent <own_agent_id> \
+  --no-deliver \
+  --timeout-seconds 1800 \
+  --message "$WAKE_MESSAGE"
+
+# Add recurring watchdog wake
+WATCHDOG_MESSAGE="$(cat /abs/path/watchdog-message.txt)"
+openclaw cron add \
+  --name auto-iterate-watchdog \
+  --every 180000 \
+  --session isolated \
+  --agent <own_agent_id> \
+  --no-deliver \
+  --timeout-seconds 1800 \
+  --message "$WATCHDOG_MESSAGE"
+
+# Remove a wake
+openclaw cron remove <job-id>
+```
+
+If CLI fallback fails, persist runtime limitation and stop instead of continuing with a broken chain.
+
+## 5. Script invocation examples
 
 ```bash
 # Validate state structure before commit or cleanup
@@ -84,7 +117,7 @@ python3 scripts/compute_next_poll.py --complexity moderate --poll-streak 2
 python3 scripts/render_progress.py /abs/path/STATE.md --mode progress
 ```
 
-## 5. User-visible report templates
+## 6. User-visible report templates
 
 Routing rule: the coordinator sends these messages directly to `origin.report_to` via `message(action="send")`. User-visible text contains only user-meaningful content.
 

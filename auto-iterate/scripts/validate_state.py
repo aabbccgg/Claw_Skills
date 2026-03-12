@@ -9,6 +9,7 @@ PENDING = {"idle", "spawn", "advance", "pause", "complete", "resume"}
 RESUME_MODE = {"none", "quota-auto", "user-resume"}
 BLOCKED_BY = {"none", "claude-quota", "user-input", "repair-failed"}
 POLL_COMPLEXITY = {"trivial", "simple", "moderate", "complex"}
+CRON_PATH = {"native-first-cli-fallback"}
 ACTIVE_WORKER_STATUSES = {"accepted", "running"}
 
 
@@ -50,13 +51,15 @@ def main():
             err(errors, f"origin.report_to missing: {key}")
 
     coord = data.get("coordination", {})
-    for key in ["state_version", "writer_session", "lease_expires_at", "pending_transition", "last_cycle_at", "next_expected_wake_at", "current_wake_job_id", "next_wake_job_id", "watchdog_job_id", "cleanup_pending", "watchdog_tripped_count", "alert_needed", "alert_sent", "poll_streak", "poll_complexity"]:
+    for key in ["state_version", "writer_session", "lease_expires_at", "pending_transition", "last_cycle_at", "next_expected_wake_at", "current_wake_job_id", "next_wake_job_id", "watchdog_job_id", "cleanup_pending", "watchdog_tripped_count", "alert_needed", "alert_sent", "poll_streak", "poll_complexity", "cron_path"]:
         if key not in coord:
             err(errors, f"coordination missing: {key}")
     if coord.get("pending_transition") not in PENDING:
         err(errors, f"invalid pending_transition: {coord.get('pending_transition')}")
     if coord.get("poll_complexity") not in POLL_COMPLEXITY:
         err(errors, f"invalid poll_complexity: {coord.get('poll_complexity')}")
+    if coord.get("cron_path") not in CRON_PATH:
+        err(errors, f"invalid cron_path: {coord.get('cron_path')}")
     if not isinstance(coord.get("cleanup_pending", []), list):
         err(errors, "coordination.cleanup_pending must be a list")
     for key in ["alert_needed", "alert_sent"]:

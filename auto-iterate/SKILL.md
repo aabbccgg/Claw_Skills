@@ -14,6 +14,8 @@ metadata:
 
 Use this skill as a low-freedom orchestration protocol. Treat the user's loop definition and exit criteria as authoritative.
 
+Cron path: native cron first, exec+openclaw cron CLI fallback second.
+
 ## 1. Admit or stop
 
 Start only when all are true:

@@ -2,7 +2,7 @@ id: fixture-watchdog-repair
 task: Repaired wake chain
 target: Continue after watchdog recovery
 status: running
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: resume coordinator polling
 round: 3
@@ -19,37 +19,42 @@ origin:
 coordination:
   state_version: 7
   writer_session: cron:watchdog
-  lease_expires_at: 2026-03-11T00:02:00Z
+  lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: advance
-  last_cycle_at: 2026-03-11T00:00:00Z
-  next_expected_wake_at: 2026-03-11T00:06:00Z
+  last_cycle_at: 2026-03-11 00:00:00+00:00
+  next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-r1
   next_wake_job_id: null
   watchdog_job_id: jobw
-  cleanup_pending: [job-old]
+  cleanup_pending:
+  - job-old
   watchdog_tripped_count: 1
   alert_needed: true
   alert_sent: false
   poll_streak: 0
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: loop-repair
-    parent: null
-    kind: single
-    status: running
-    round: 3
-    funcs: [resume]
-    current_func: resume
-    exit_condition: continue
-    merge_policy: null
-    branches: []
+- id: loop-repair
+  parent: null
+  kind: single
+  status: running
+  round: 3
+  funcs:
+  - resume
+  current_func: resume
+  exit_condition: continue
+  merge_policy: null
+  branches: []
 subagents: []
 progress:
-  active_loop_ids: [loop-repair]
+  active_loop_ids:
+  - loop-repair
   last_subagent_result: watchdog recreated the coordinator wake
   last_failure_reason: coordinator wake chain broke and was repaired
   completed_items: []
-  in_progress_items: [resume]
+  in_progress_items:
+  - resume
   commit_refs: []
   test_summary: null
   total_retry_count: 0

@@ -2,7 +2,7 @@ id: fixture-quota-resumed
 task: Resume after quota restored
 target: Continue after quota reset
 status: running
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: continue branch after quota restore
 round: 4
@@ -19,10 +19,10 @@ origin:
 coordination:
   state_version: 8
   writer_session: main
-  lease_expires_at: 2026-03-11T02:02:00Z
+  lease_expires_at: 2026-03-11 02:02:00+00:00
   pending_transition: resume
-  last_cycle_at: 2026-03-11T02:00:00Z
-  next_expected_wake_at: 2026-03-11T02:06:00Z
+  last_cycle_at: 2026-03-11 02:00:00+00:00
+  next_expected_wake_at: 2026-03-11 02:06:00+00:00
   current_wake_job_id: job-q1
   next_wake_job_id: null
   watchdog_job_id: jobw
@@ -32,36 +32,43 @@ coordination:
   alert_sent: false
   poll_streak: 0
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: loop-quota
-    parent: null
-    kind: single
-    status: running
-    round: 4
-    funcs: [dev, test]
-    current_func: dev
-    exit_condition: pass
-    merge_policy: null
-    branches: []
+- id: loop-quota
+  parent: null
+  kind: single
+  status: running
+  round: 4
+  funcs:
+  - dev
+  - test
+  current_func: dev
+  exit_condition: pass
+  merge_policy: null
+  branches: []
 subagents:
-  - child_session_key: agent:quota
-    run_id: run-q1
-    loop_id: loop-quota
-    branch_id: null
-    status: running
-    started_at: 2026-03-11T02:00:00Z
-    timeout_at: 2026-03-11T03:00:00Z
-    last_checked_at: 2026-03-11T02:01:00Z
-    summary: resumed after quota reset
-    criteria_assessment: not-met
-    next_action_hint: advance
+- child_session_key: agent:quota
+  run_id: run-q1
+  loop_id: loop-quota
+  branch_id: null
+  status: running
+  started_at: 2026-03-11 02:00:00+00:00
+  timeout_at: 2026-03-11 03:00:00+00:00
+  last_checked_at: 2026-03-11 02:01:00+00:00
+  summary: resumed after quota reset
+  criteria_assessment: not-met
+  next_action_hint: advance
 progress:
-  active_loop_ids: [loop-quota]
+  active_loop_ids:
+  - loop-quota
   last_subagent_result: resumed after quota reset
   last_failure_reason: null
-  completed_items: [dashboard fixes]
-  in_progress_items: [remaining regression]
-  commit_refs: [abc1234]
+  completed_items:
+  - dashboard fixes
+  in_progress_items:
+  - remaining regression
+  commit_refs:
+  - abc1234
   test_summary: 97 passed
   total_retry_count: 1
   no_fix_rounds_total: 0

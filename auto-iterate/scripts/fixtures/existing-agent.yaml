@@ -2,7 +2,7 @@ id: fixture-existing-agent
 task: Existing agent orchestration
 target: Existing agent returns review result
 status: awaiting-review
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: wait for existing agent
 round: 1
@@ -19,10 +19,10 @@ origin:
 coordination:
   state_version: 3
   writer_session: main
-  lease_expires_at: 2026-03-11T00:02:00Z
+  lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: spawn
-  last_cycle_at: 2026-03-11T00:00:00Z
-  next_expected_wake_at: 2026-03-11T00:06:00Z
+  last_cycle_at: 2026-03-11 00:00:00+00:00
+  next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-e1
   next_wake_job_id: null
   watchdog_job_id: jobw
@@ -32,35 +32,39 @@ coordination:
   alert_sent: false
   poll_streak: 0
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: loop-existing
-    parent: null
-    kind: single
-    status: running
-    round: 1
-    funcs: [review]
-    current_func: review
-    exit_condition: review returned
-    merge_policy: null
-    branches: []
+- id: loop-existing
+  parent: null
+  kind: single
+  status: running
+  round: 1
+  funcs:
+  - review
+  current_func: review
+  exit_condition: review returned
+  merge_policy: null
+  branches: []
 subagents:
-  - child_session_key: agent:reviewer:telegram:group:-100:topic:1
-    run_id: null
-    loop_id: loop-existing
-    branch_id: null
-    status: running
-    started_at: 2026-03-11T00:00:00Z
-    timeout_at: 2026-03-11T01:00:00Z
-    last_checked_at: 2026-03-11T00:01:00Z
-    summary: existing agent is reviewing
-    criteria_assessment: unclear
-    next_action_hint: advance
+- child_session_key: agent:reviewer:telegram:group:-100:topic:1
+  run_id: null
+  loop_id: loop-existing
+  branch_id: null
+  status: running
+  started_at: 2026-03-11 00:00:00+00:00
+  timeout_at: 2026-03-11 01:00:00+00:00
+  last_checked_at: 2026-03-11 00:01:00+00:00
+  summary: existing agent is reviewing
+  criteria_assessment: unclear
+  next_action_hint: advance
 progress:
-  active_loop_ids: [loop-existing]
+  active_loop_ids:
+  - loop-existing
   last_subagent_result: existing agent is reviewing
   last_failure_reason: null
   completed_items: []
-  in_progress_items: [review]
+  in_progress_items:
+  - review
   commit_refs: []
   test_summary: null
   total_retry_count: 0

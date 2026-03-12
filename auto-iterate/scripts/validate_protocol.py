@@ -9,6 +9,7 @@ import yaml
 ACTIVE = {"accepted", "running"}
 TERMINAL = {"complete", "paused"}
 TERMINALISH_WORKER = {"success", "no-change", "blocked", "failed", "timed-out", "stalled"}
+EXPECTED_CRON_PATH = "native-first-cli-fallback"
 
 
 def load_state(path: Path):
@@ -46,6 +47,9 @@ def main():
         errors.append('complete requires wake_cleanup_complete=true')
     if cleanup.get('terminal_report_sent') and status not in TERMINAL:
         errors.append('terminal_report_sent=true requires terminal status')
+    if coord.get('cron_path') != EXPECTED_CRON_PATH:
+        errors.append(f"cron_path policy drift: expected {EXPECTED_CRON_PATH}, got {coord.get('cron_path')}")
+
     if status in {'running', 'awaiting-review'}:
         if not coord.get('current_wake_job_id'):
             errors.append('non-terminal workflow requires current_wake_job_id')

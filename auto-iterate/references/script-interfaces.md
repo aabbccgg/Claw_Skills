@@ -62,6 +62,13 @@ Use this file instead of reading full script source when you only need the invoc
 - Output:
   - plain text only, ready for `message(action="send")`
 
+## Cron capability contract
+- Cron path: native cron first, `exec` + `openclaw cron ...` CLI fallback second.
+- Preferred path: native OpenClaw `cron` tool.
+- Fallback path: `exec` + `openclaw cron ...` CLI only when native `cron` is unavailable.
+- Never improvise arbitrary shell-based cron management outside that fallback.
+- If neither is available, the wake must persist runtime limitation and stop so watchdog can repair.
+
 ## test_fixtures.py
 - Purpose: regression-check all fixture states across validators/renderers
 - Args: none

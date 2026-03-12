@@ -2,7 +2,7 @@ id: fixture-watchdog-direct-alert
 task: Watchdog direct alert exception
 target: Watchdog may send one direct repair alert
 status: running
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: recover after repeated watchdog trips
 round: 4
@@ -19,10 +19,10 @@ origin:
 coordination:
   state_version: 12
   writer_session: cron:watchdog
-  lease_expires_at: 2026-03-11T00:02:00Z
+  lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: advance
-  last_cycle_at: 2026-03-11T00:00:00Z
-  next_expected_wake_at: 2026-03-11T00:06:00Z
+  last_cycle_at: 2026-03-11 00:00:00+00:00
+  next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-w1
   next_wake_job_id: null
   watchdog_job_id: jobw
@@ -32,24 +32,28 @@ coordination:
   alert_sent: true
   poll_streak: 0
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: loop-watchdog
-    parent: null
-    kind: single
-    status: running
-    round: 4
-    funcs: [repair]
-    current_func: repair
-    exit_condition: repaired
-    merge_policy: null
-    branches: []
+- id: loop-watchdog
+  parent: null
+  kind: single
+  status: running
+  round: 4
+  funcs:
+  - repair
+  current_func: repair
+  exit_condition: repaired
+  merge_policy: null
+  branches: []
 subagents: []
 progress:
-  active_loop_ids: [loop-watchdog]
+  active_loop_ids:
+  - loop-watchdog
   last_subagent_result: watchdog direct alert path triggered
   last_failure_reason: repeated coordinator recovery failures
   completed_items: []
-  in_progress_items: [repair]
+  in_progress_items:
+  - repair
   commit_refs: []
   test_summary: null
   total_retry_count: 0

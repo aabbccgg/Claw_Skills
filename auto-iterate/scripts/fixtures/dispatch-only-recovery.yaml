@@ -2,7 +2,7 @@ id: fixture-dispatch-only-recovery
 task: Dispatch-only recovery
 target: Recovery should enqueue a worker and end
 status: running
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: missing worker for current step
 round: 2
@@ -19,10 +19,10 @@ origin:
 coordination:
   state_version: 4
   writer_session: main
-  lease_expires_at: 2026-03-11T00:02:00Z
+  lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: spawn
-  last_cycle_at: 2026-03-11T00:00:00Z
-  next_expected_wake_at: 2026-03-11T00:06:00Z
+  last_cycle_at: 2026-03-11 00:00:00+00:00
+  next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-d1
   next_wake_job_id: null
   watchdog_job_id: jobw
@@ -32,24 +32,29 @@ coordination:
   alert_sent: false
   poll_streak: 0
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: loop-dispatch
-    parent: null
-    kind: single
-    status: running
-    round: 2
-    funcs: [developer-fix, tester-verify]
-    current_func: developer-fix
-    exit_condition: done
-    merge_policy: null
-    branches: []
+- id: loop-dispatch
+  parent: null
+  kind: single
+  status: running
+  round: 2
+  funcs:
+  - developer-fix
+  - tester-verify
+  current_func: developer-fix
+  exit_condition: done
+  merge_policy: null
+  branches: []
 subagents: []
 progress:
-  active_loop_ids: [loop-dispatch]
+  active_loop_ids:
+  - loop-dispatch
   last_subagent_result: null
   last_failure_reason: null
   completed_items: []
-  in_progress_items: [developer-fix]
+  in_progress_items:
+  - developer-fix
   commit_refs: []
   test_summary: null
   pending_reports: []

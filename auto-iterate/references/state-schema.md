@@ -39,6 +39,7 @@ coordination:
   alert_sent: <bool>
   poll_streak: <int>
   poll_complexity: trivial|simple|moderate|complex
+  cron_path: native-first-cli-fallback
 
 loops:
   - id: <loop id>
@@ -105,6 +106,7 @@ cleanup:
 - `coordination.next_wake_job_id` exists only during add-before-remove handoff.
 - `coordination.cleanup_pending[]` retains obsolete wake ids that still need removal.
 - `coordination.poll_complexity` is the canonical polling complexity used by `scripts/compute_next_poll.py`.
+- `coordination.cron_path` is a protocol constant. Use `native-first-cli-fallback`, meaning native `cron` tool first and `exec + openclaw cron ...` only as explicit fallback.
 - `coordination.alert_needed` marks that the coordinator should emit a repair-related user-visible message.
 - `coordination.alert_needed` is cleared by the coordinator during PERSIST in the same cycle that emits the repair alert during REPORT.
 - `coordination.alert_sent` prevents duplicate watchdog repair alerts when the watchdog uses the narrow direct-alert exception.

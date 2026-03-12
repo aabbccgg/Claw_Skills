@@ -33,6 +33,7 @@ FIXTURES = [
     ROOT / 'scripts' / 'fixtures' / 'ingest-only-recovery.yaml',
     ROOT / 'scripts' / 'fixtures' / 'dispatch-only-recovery.yaml',
     ROOT / 'scripts' / 'fixtures' / 'repair-only-recovery.yaml',
+    ROOT / 'scripts' / 'fixtures' / 'invalid-cron-path.yaml',
 ]
 
 
@@ -47,6 +48,17 @@ MODE_OVERRIDES = {
     'repair-pending-report.yaml': 'repair',
 }
 
+
+DOC_CONTRACTS = [
+    (ROOT / 'SKILL.md', ['Cron path:', 'native cron first', 'CLI fallback second']),
+    (ROOT / 'references' / 'script-interfaces.md', ['Cron path:', 'native cron first', 'openclaw cron', 'CLI fallback second']),
+    (ROOT / 'references' / 'recovery.md', ['Cron path is native first', 'CLI fallback second', 'openclaw cron']),
+    (ROOT / 'references' / 'examples.md', ['Cron path is native first', 'CLI fallback second', '--session isolated', '--no-deliver', '--agent <own_agent_id>', 'openclaw cron remove <job-id>']),
+    (ROOT / 'references' / 'state-schema.md', ['cron_path: native-first-cli-fallback']),
+]
+
+EXPECTED_CRON_PATH = 'native-first-cli-fallback'
+
 EXPECTED_FAILURES = {
     ('branch-worker-conflict.yaml', 'validate_protocol.py'),
     ('broken-wake-backlog.yaml', 'validate_protocol.py'),
@@ -55,6 +67,8 @@ EXPECTED_FAILURES = {
     ('existing-agent-dispatch-timeout-misclassified.yaml', 'validate_protocol.py'),
     ('existing-agent-redundant-redispatch.yaml', 'validate_protocol.py'),
     ('repair-only-recovery.yaml', 'validate_protocol.py'),
+    ('invalid-cron-path.yaml', 'validate_state.py'),
+    ('invalid-cron-path.yaml', 'validate_protocol.py'),
 }
 
 
@@ -78,9 +92,34 @@ def run(cmd):
 
 def main():
     results = []
+    doc_checks = []
+    for doc_path, fragments in DOC_CONTRACTS:
+        content = doc_path.read_text()
+        missing = [fragment for fragment in fragments if fragment not in content]
+        ok = not missing
+        doc_checks.append({
+            "fixture": "__docs__",
+            "status": "n/a",
+            "command": f"contains-all:{len(fragments)}-fragments",
+            "ok": ok,
+            "expected_ok": True,
+            "stdout": str(doc_path),
+            "stderr": "" if ok else f"missing fragments in {doc_path}: {missing}",
+        })
     for fixture in FIXTURES:
         state = load_yaml(fixture)
         status = state['status']
+        fixture_cron_path = ((state.get('coordination') or {}).get('cron_path'))
+        if fixture.name != 'invalid-cron-path.yaml' and fixture_cron_path != EXPECTED_CRON_PATH:
+            results.append({
+                'fixture': fixture.name,
+                'status': status,
+                'command': 'fixture cron_path check',
+                'ok': False,
+                'expected_ok': True,
+                'stdout': fixture_cron_path or '',
+                'stderr': f'fixture cron_path mismatch: expected {EXPECTED_CRON_PATH}',
+            })
         commands = [
             ['python3', str(ROOT / 'scripts' / 'validate_state.py'), str(fixture)],
             ['python3', str(ROOT / 'scripts' / 'validate_protocol.py'), str(fixture)],
@@ -102,6 +141,7 @@ def main():
                 'stdout': out[:300],
                 'stderr': err[:300],
             })
+    results.extend(doc_checks)
     failed = [r for r in results if not r['ok']]
     summary = {
         'fixtureRuns': len(results),

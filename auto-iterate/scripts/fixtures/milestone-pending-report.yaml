@@ -2,7 +2,7 @@ id: fixture-milestone-pending-report
 task: Milestone report queued after loop advance
 target: Pending milestone should render before generic progress
 status: running
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: Part 2 developer dispatch pending
 round: 2
@@ -19,10 +19,10 @@ origin:
 coordination:
   state_version: 9
   writer_session: main
-  lease_expires_at: 2026-03-11T00:02:00Z
+  lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: advance
-  last_cycle_at: 2026-03-11T00:00:00Z
-  next_expected_wake_at: 2026-03-11T00:06:00Z
+  last_cycle_at: 2026-03-11 00:00:00+00:00
+  next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-m1
   next_wake_job_id: null
   watchdog_job_id: jobw
@@ -32,51 +32,61 @@ coordination:
   alert_sent: false
   poll_streak: 1
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: part1
-    parent: null
-    kind: single
-    status: complete
-    round: 1
-    funcs: [developer-fix, tester-verify]
-    current_func: null
-    exit_condition: done
-    merge_policy: null
-    branches: []
-  - id: part2
-    parent: null
-    kind: single
-    status: running
-    round: 2
-    funcs: [developer-fix, tester-verify]
-    current_func: developer-fix
-    exit_condition: done
-    merge_policy: null
-    branches: []
+- id: part1
+  parent: null
+  kind: single
+  status: complete
+  round: 1
+  funcs:
+  - developer-fix
+  - tester-verify
+  current_func: null
+  exit_condition: done
+  merge_policy: null
+  branches: []
+- id: part2
+  parent: null
+  kind: single
+  status: running
+  round: 2
+  funcs:
+  - developer-fix
+  - tester-verify
+  current_func: developer-fix
+  exit_condition: done
+  merge_policy: null
+  branches: []
 subagents:
-  - child_session_key: agent:tester:topic:51
-    run_id: run-t1
-    loop_id: part1
-    branch_id: null
-    status: success
-    started_at: 2026-03-11T00:00:00Z
-    timeout_at: 2026-03-11T01:00:00Z
-    last_checked_at: 2026-03-11T00:05:00Z
-    summary: tester verified Part 1; criteria met
-    criteria_assessment: met
-    next_action_hint: advance
+- child_session_key: agent:tester:topic:51
+  run_id: run-t1
+  loop_id: part1
+  branch_id: null
+  status: success
+  started_at: 2026-03-11 00:00:00+00:00
+  timeout_at: 2026-03-11 01:00:00+00:00
+  last_checked_at: 2026-03-11 00:05:00+00:00
+  summary: tester verified Part 1; criteria met
+  criteria_assessment: met
+  next_action_hint: advance
 progress:
-  active_loop_ids: [part2]
+  active_loop_ids:
+  - part2
   last_subagent_result: Part 1 verified complete; advancing to Part 2
   last_failure_reason: null
-  completed_items: [Part 1 developer fixes, Part 1 tester verification]
-  in_progress_items: [Part 2 developer dispatch pending]
-  commit_refs: [f4d89a7]
+  completed_items:
+  - Part 1 developer fixes
+  - Part 1 tester verification
+  in_progress_items:
+  - Part 2 developer dispatch pending
+  commit_refs:
+  - f4d89a7
   test_summary: Part 1 targeted checks passed
   pending_reports:
-    - type: milestone
-      key: loop-part1-complete
-      summary: Part 1 verified complete; advancing to Part 2
+  - type: milestone
+    key: loop-part1-complete
+    summary: Part 1 verified complete; advancing to Part 2
   total_retry_count: 0
   no_fix_rounds_total: 0
 resume:

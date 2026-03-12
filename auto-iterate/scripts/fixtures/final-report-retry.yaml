@@ -2,7 +2,7 @@ id: fixture-final-report-retry
 task: Final report retry path
 target: Report once cleanup already completed
 status: complete
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: final-report-retry
 round: 4
@@ -19,9 +19,9 @@ origin:
 coordination:
   state_version: 11
   writer_session: main
-  lease_expires_at: 2026-03-11T03:02:00Z
+  lease_expires_at: 2026-03-11 03:02:00+00:00
   pending_transition: complete
-  last_cycle_at: 2026-03-11T03:00:00Z
+  last_cycle_at: 2026-03-11 03:00:00+00:00
   next_expected_wake_at: null
   current_wake_job_id: null
   next_wake_job_id: null
@@ -32,25 +32,31 @@ coordination:
   alert_sent: false
   poll_streak: 0
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: loop-final
-    parent: null
-    kind: single
-    status: complete
-    round: 4
-    funcs: [dev, test]
-    current_func: null
-    exit_condition: pass
-    merge_policy: null
-    branches: []
+- id: loop-final
+  parent: null
+  kind: single
+  status: complete
+  round: 4
+  funcs:
+  - dev
+  - test
+  current_func: null
+  exit_condition: pass
+  merge_policy: null
+  branches: []
 subagents: []
 progress:
   active_loop_ids: []
   last_subagent_result: cleanup finished; retrying final report
   last_failure_reason: previous final report delivery failed
-  completed_items: [all fixes]
+  completed_items:
+  - all fixes
   in_progress_items: []
-  commit_refs: [abc1234, def5678]
+  commit_refs:
+  - abc1234
+  - def5678
   test_summary: 119 passed
   total_retry_count: 1
   no_fix_rounds_total: 0

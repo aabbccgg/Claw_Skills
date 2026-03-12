@@ -2,7 +2,7 @@ id: fixture-broken-wake-backlog
 task: Broken wake with cleanup backlog
 target: Watchdog/coordinator must rebuild wake chain
 status: running
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: repair wake chain
 round: 3
@@ -19,37 +19,43 @@ origin:
 coordination:
   state_version: 9
   writer_session: cron:watchdog
-  lease_expires_at: 2026-03-11T00:02:00Z
+  lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: advance
-  last_cycle_at: 2026-03-11T00:00:00Z
-  next_expected_wake_at: 2026-03-11T00:06:00Z
+  last_cycle_at: 2026-03-11 00:00:00+00:00
+  next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: null
   next_wake_job_id: null
   watchdog_job_id: jobw
-  cleanup_pending: [job-old-1, job-old-2]
+  cleanup_pending:
+  - job-old-1
+  - job-old-2
   watchdog_tripped_count: 2
   alert_needed: true
   alert_sent: false
   poll_streak: 0
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: loop-backlog
-    parent: null
-    kind: single
-    status: running
-    round: 3
-    funcs: [repair]
-    current_func: repair
-    exit_condition: wake restored
-    merge_policy: null
-    branches: []
+- id: loop-backlog
+  parent: null
+  kind: single
+  status: running
+  round: 3
+  funcs:
+  - repair
+  current_func: repair
+  exit_condition: wake restored
+  merge_policy: null
+  branches: []
 subagents: []
 progress:
-  active_loop_ids: [loop-backlog]
+  active_loop_ids:
+  - loop-backlog
   last_subagent_result: coordinator wake missing
   last_failure_reason: broken wake chain with cleanup backlog
   completed_items: []
-  in_progress_items: [repair]
+  in_progress_items:
+  - repair
   commit_refs: []
   test_summary: null
   total_retry_count: 0

@@ -2,7 +2,7 @@ id: fixture-existing-agent-result-ready
 task: Existing agent result ready to ingest
 target: Coordinator should ingest and advance instead of redispatching
 status: awaiting-review
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: ingest existing agent result
 round: 1
@@ -19,10 +19,10 @@ origin:
 coordination:
   state_version: 6
   writer_session: main
-  lease_expires_at: 2026-03-11T00:02:00Z
+  lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: advance
-  last_cycle_at: 2026-03-11T00:00:00Z
-  next_expected_wake_at: 2026-03-11T00:06:00Z
+  last_cycle_at: 2026-03-11 00:00:00+00:00
+  next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-er1
   next_wake_job_id: null
   watchdog_job_id: jobw
@@ -32,36 +32,42 @@ coordination:
   alert_sent: false
   poll_streak: 1
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: part1
-    parent: null
-    kind: single
-    status: running
-    round: 1
-    funcs: [developer-fix, tester-verify]
-    current_func: developer-fix
-    exit_condition: done
-    merge_policy: null
-    branches: []
+- id: part1
+  parent: null
+  kind: single
+  status: running
+  round: 1
+  funcs:
+  - developer-fix
+  - tester-verify
+  current_func: developer-fix
+  exit_condition: done
+  merge_policy: null
+  branches: []
 subagents:
-  - child_session_key: agent:developer:telegram:group:-100:topic:50
-    run_id: null
-    loop_id: part1
-    branch_id: null
-    status: success
-    started_at: 2026-03-11T00:00:00Z
-    timeout_at: 2026-03-11T01:00:00Z
-    last_checked_at: 2026-03-11T00:05:00Z
-    summary: current HEAD already satisfies the blocker criteria
-    criteria_assessment: met
-    next_action_hint: advance
+- child_session_key: agent:developer:telegram:group:-100:topic:50
+  run_id: null
+  loop_id: part1
+  branch_id: null
+  status: success
+  started_at: 2026-03-11 00:00:00+00:00
+  timeout_at: 2026-03-11 01:00:00+00:00
+  last_checked_at: 2026-03-11 00:05:00+00:00
+  summary: current HEAD already satisfies the blocker criteria
+  criteria_assessment: met
+  next_action_hint: advance
 progress:
-  active_loop_ids: [part1]
+  active_loop_ids:
+  - part1
   last_subagent_result: existing-agent returned met/advance envelope
   last_failure_reason: null
-  completed_items: [part1-ready]
+  completed_items:
+  - part1-ready
   in_progress_items: []
-  commit_refs: [f177116]
+  commit_refs:
+  - f177116
   test_summary: 34 passed
   total_retry_count: 0
   no_fix_rounds_total: 0

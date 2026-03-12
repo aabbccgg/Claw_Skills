@@ -26,6 +26,7 @@ Reading policy for recovery wakes:
 - Read `STATE.md` first.
 - Read only the minimum directly relevant script or reference needed for the chosen mode.
 - Do not broadly re-read examples, fixtures, or CLI help unless validation fails.
+- Cron path is native first, CLI fallback second. If CLI fallback is needed, use known `openclaw cron ...` templates directly; do not explore `openclaw help` interactively inside the wake.
 
 ## Broken wake chain repair
 
@@ -36,6 +37,9 @@ Treat the chain as broken if any is true:
 
 Repair sequence:
 1. Add a fresh isolated coordinator wake.
+   - Cron path is native first, CLI fallback second.
+   - Prefer native `cron(action="add")`.
+   - If native `cron` is unavailable but `exec` can run `openclaw cron ...`, use CLI fallback.
 2. Persist the new id as `next_wake_job_id`.
 3. Promote it to `current_wake_job_id`.
 4. Push the old id, if any, into `cleanup_pending[]`.

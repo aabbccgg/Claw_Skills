@@ -2,7 +2,7 @@ id: fixture-ingest-only-recovery
 task: Ingest existing result before any redispatch
 target: Recovery should prefer ingestion over redispatch
 status: awaiting-review
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: awaiting worker result ingest
 round: 2
@@ -19,10 +19,10 @@ origin:
 coordination:
   state_version: 6
   writer_session: main
-  lease_expires_at: 2026-03-11T00:02:00Z
+  lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: advance
-  last_cycle_at: 2026-03-11T00:00:00Z
-  next_expected_wake_at: 2026-03-11T00:06:00Z
+  last_cycle_at: 2026-03-11 00:00:00+00:00
+  next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-i1
   next_wake_job_id: null
   watchdog_job_id: jobw
@@ -32,36 +32,42 @@ coordination:
   alert_sent: false
   poll_streak: 1
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: loop-ingest
-    parent: null
-    kind: single
-    status: running
-    round: 2
-    funcs: [developer-fix, tester-verify]
-    current_func: developer-fix
-    exit_condition: done
-    merge_policy: null
-    branches: []
+- id: loop-ingest
+  parent: null
+  kind: single
+  status: running
+  round: 2
+  funcs:
+  - developer-fix
+  - tester-verify
+  current_func: developer-fix
+  exit_condition: done
+  merge_policy: null
+  branches: []
 subagents:
-  - child_session_key: agent:developer:topic:50
-    run_id: null
-    loop_id: loop-ingest
-    branch_id: null
-    status: success
-    started_at: 2026-03-11T00:00:00Z
-    timeout_at: 2026-03-11T01:00:00Z
-    last_checked_at: 2026-03-11T00:05:00Z
-    summary: developer completed the fixes
-    criteria_assessment: met
-    next_action_hint: advance
+- child_session_key: agent:developer:topic:50
+  run_id: null
+  loop_id: loop-ingest
+  branch_id: null
+  status: success
+  started_at: 2026-03-11 00:00:00+00:00
+  timeout_at: 2026-03-11 01:00:00+00:00
+  last_checked_at: 2026-03-11 00:05:00+00:00
+  summary: developer completed the fixes
+  criteria_assessment: met
+  next_action_hint: advance
 progress:
-  active_loop_ids: [loop-ingest]
+  active_loop_ids:
+  - loop-ingest
   last_subagent_result: developer completed the fixes
   last_failure_reason: null
-  completed_items: [developer fixes]
+  completed_items:
+  - developer fixes
   in_progress_items: []
-  commit_refs: [abc1234]
+  commit_refs:
+  - abc1234
   test_summary: 20 passed
   pending_reports: []
   total_retry_count: 0

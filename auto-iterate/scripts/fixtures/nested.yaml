@@ -2,7 +2,7 @@ id: fixture-nested
 task: Nested loop review
 target: Child loop completes before parent advances
 status: running
-started_at: 2026-03-11T00:00:00Z
+started_at: 2026-03-11 00:00:00+00:00
 workdir: /tmp/project
 current: child-loop
 round: 3
@@ -19,10 +19,10 @@ origin:
 coordination:
   state_version: 5
   writer_session: main
-  lease_expires_at: 2026-03-11T00:02:00Z
+  lease_expires_at: 2026-03-11 00:02:00+00:00
   pending_transition: advance
-  last_cycle_at: 2026-03-11T00:00:00Z
-  next_expected_wake_at: 2026-03-11T00:06:00Z
+  last_cycle_at: 2026-03-11 00:00:00+00:00
+  next_expected_wake_at: 2026-03-11 00:06:00+00:00
   current_wake_job_id: job-n1
   next_wake_job_id: null
   watchdog_job_id: jobw
@@ -32,45 +32,52 @@ coordination:
   alert_sent: false
   poll_streak: 1
   poll_complexity: moderate
+  cron_path: native-first-cli-fallback
 loops:
-  - id: parent-loop
-    parent: null
-    kind: nested
-    status: running
-    round: 3
-    funcs: [child-loop, parent-verify]
-    current_func: child-loop
-    exit_condition: parent done
-    merge_policy: null
-    branches: []
-  - id: child-loop
-    parent: parent-loop
-    kind: single
-    status: running
-    round: 2
-    funcs: [dev, test]
-    current_func: dev
-    exit_condition: child done
-    merge_policy: null
-    branches: []
+- id: parent-loop
+  parent: null
+  kind: nested
+  status: running
+  round: 3
+  funcs:
+  - child-loop
+  - parent-verify
+  current_func: child-loop
+  exit_condition: parent done
+  merge_policy: null
+  branches: []
+- id: child-loop
+  parent: parent-loop
+  kind: single
+  status: running
+  round: 2
+  funcs:
+  - dev
+  - test
+  current_func: dev
+  exit_condition: child done
+  merge_policy: null
+  branches: []
 subagents:
-  - child_session_key: agent:nested
-    run_id: run-n1
-    loop_id: child-loop
-    branch_id: null
-    status: running
-    started_at: 2026-03-11T00:00:00Z
-    timeout_at: 2026-03-11T01:00:00Z
-    last_checked_at: 2026-03-11T00:01:00Z
-    summary: child loop developer is working
-    criteria_assessment: not-met
-    next_action_hint: advance
+- child_session_key: agent:nested
+  run_id: run-n1
+  loop_id: child-loop
+  branch_id: null
+  status: running
+  started_at: 2026-03-11 00:00:00+00:00
+  timeout_at: 2026-03-11 01:00:00+00:00
+  last_checked_at: 2026-03-11 00:01:00+00:00
+  summary: child loop developer is working
+  criteria_assessment: not-met
+  next_action_hint: advance
 progress:
-  active_loop_ids: [child-loop]
+  active_loop_ids:
+  - child-loop
   last_subagent_result: child loop developer is working
   last_failure_reason: null
   completed_items: []
-  in_progress_items: [child-loop]
+  in_progress_items:
+  - child-loop
   commit_refs: []
   test_summary: null
   total_retry_count: 0
