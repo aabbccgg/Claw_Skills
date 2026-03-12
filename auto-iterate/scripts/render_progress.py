@@ -6,6 +6,9 @@ from pathlib import Path
 import yaml
 
 
+ACTIVE_WORKER_STATUSES = {"accepted", "running"}
+
+
 def load_yaml(path: Path):
     text = path.read_text()
     m = re.search(r"```yaml\n(.*?)\n```", text, re.S)
@@ -77,40 +80,81 @@ def pick_mode(state, explicit=None):
     return 'progress'
 
 
-def classify_workers(state, limit=3):
+def classify_workers(state, limit=2):
     subs = state.get('subagents', []) or []
-    if not subs:
-        current = state.get('current') or 'orchestration cycle'
-        return [('Coordinator', '🔄 Running', [f'Current: {current}'])]
+    active_subs = [sub for sub in subs if sub.get('status') in ACTIVE_WORKER_STATUSES]
+    if not active_subs:
+        return []
 
     groups = {'Developer': [], 'Tester': [], 'Worker': []}
-    for sub in subs:
-        label = (sub.get('loop_id') or '').lower() + ' ' + (sub.get('branch_id') or '').lower()
-        if 'test' in label or 'verify' in label:
+    for sub in active_subs:
+        summary = str(sub.get('summary') or '').strip()
+        role_source = ' '.join(
+            filter(
+                None,
+                [
+                    str(sub.get('loop_id') or ''),
+                    str(sub.get('branch_id') or ''),
+                    summary,
+                ],
+            )
+        ).lower()
+        if any(token in role_source for token in ['test', 'tester', 'verify', 'verification', 'validate']):
             groups['Tester'].append(sub)
-        elif 'dev' in label or 'fix' in label or 'part' in label:
+        elif any(token in role_source for token in ['dev', 'developer', 'fix', 'implement', 'patch']):
             groups['Developer'].append(sub)
         else:
             groups['Worker'].append(sub)
 
-    lines = []
+    results = []
     for role in ['Developer', 'Tester', 'Worker']:
         items = groups[role]
         if not items:
             continue
-        items = sorted(items, key=lambda s: (s.get('status') not in {'accepted', 'running'}, s.get('started_at') or ''))[:limit]
-        primary = items[0]
-        details = []
-        if primary.get('summary'):
-            details.append(primary['summary'])
-        if primary.get('criteria_assessment'):
-            details.append(f"criteria={primary['criteria_assessment']}")
-        lines.append((role, f"{status_icon(primary.get('status'))} {status_text(primary.get('status'))}", details))
-    return lines
+        primary = sorted(items, key=lambda s: (s.get('started_at') or '', s.get('child_session_key') or ''))[0]
+        summary = str(primary.get('summary') or '').strip()
+        lower = summary.lower()
+        status = primary.get('status')
+        icon = status_icon(status)
+        status_label = status_text(status)
+        commit_match = re.search(r'\b[0-9a-f]{7,40}\b', summary)
+
+        if role == 'Tester':
+            if commit_match:
+                compact = f"Tester verification for commit {commit_match.group(0)}"
+            else:
+                compact = 'Tester verification in progress'
+        elif role == 'Developer':
+            if any(token in lower for token in ['follow-up', 'remaining defect', 'remaining issue', 'history', 'delete', 'deactivate', 'preservation', 'regression']):
+                compact = 'Developer follow-up fix in progress'
+            elif any(token in lower for token in ['verify', 'verification', 'pytest', 'tests', 'build']):
+                compact = 'Developer verification in progress'
+            else:
+                compact = 'Developer work in progress'
+        else:
+            if commit_match and any(token in lower for token in ['verify', 'verification', 'validate']):
+                compact = f"Verification in progress for commit {commit_match.group(0)}"
+            else:
+                compact = 'Work in progress'
+
+        results.append(
+            {
+                'role': role,
+                'icon': icon,
+                'status': status_label,
+                'summary': summary,
+                'line': f"{icon} {compact}",
+                'current': compact,
+            }
+        )
+        if len(results) >= limit:
+            break
+    return results
 
 
 def header(icon, state, now):
-    return f"{icon} [auto-iterate] Round {state.get('round', '?')} | Loop: {pick_loop_label(state)} ({fmt_local(now)})"
+    del now
+    return f"{icon} Round {state.get('round', '?')} | Loop: {pick_loop_label(state)}"
 
 
 def footer(state, now):
@@ -127,39 +171,68 @@ def extend_items(lines, label, items, limit=4):
         lines.append(f"• {label}: {', '.join(items[:limit])}")
 
 
-def render_pending_milestone(progress):
+def pick_pending_report(progress, allowed_types=None):
     pending_reports = progress.get('pending_reports') or []
-    if pending_reports:
-        item = pending_reports[0]
-        if isinstance(item, dict):
-            kind = item.get('type', 'milestone')
-            summary = item.get('summary') or item.get('key')
-            return f"Milestone ({kind}): {summary}"
+    allowed = set(allowed_types) if allowed_types else None
+    for item in pending_reports:
+        if not isinstance(item, dict):
+            continue
+        kind = item.get('type', 'milestone')
+        summary = item.get('summary') or item.get('key')
+        if not summary:
+            continue
+        if allowed and kind not in allowed:
+            continue
+        return {'type': kind, 'summary': summary}
     return None
+
+
+def render_pending_milestone(progress, allowed_types=None):
+    item = pick_pending_report(progress, allowed_types)
+    if not item:
+        return None
+    return f"Milestone: {item['summary']}"
+
+
+def pick_current_line(state):
+    progress = state.get('progress', {}) or {}
+    if progress.get('last_subagent_result'):
+        return str(progress['last_subagent_result']).strip().rstrip('.')
+    workers = classify_workers(state, limit=1)
+    if workers:
+        return workers[0]['current']
+    in_progress = progress.get('in_progress_items') or []
+    if in_progress:
+        return str(in_progress[0]).strip().rstrip('.')
+    if state.get('current'):
+        return str(state['current']).strip().rstrip('.')
+    return None
+
+
+def compact_in_progress(progress, workers, limit=2):
+    if workers:
+        values = [item['line'] for item in workers[:limit]]
+    else:
+        values = [str(item).strip().rstrip('.') for item in (progress.get('in_progress_items') or [])[:limit]]
+    deduped = []
+    for value in values:
+        if value and value not in deduped:
+            deduped.append(value)
+    return deduped
 
 
 def render_progress(state, now):
     progress = state.get('progress', {}) or {}
     lines = [header('🔄', state, now), '']
-    milestone = render_pending_milestone(progress)
+    milestone = render_pending_milestone(progress, {'milestone', 'progress'})
     if milestone:
         lines.append(milestone)
-        lines.append('')
-    for role, status_line, details in classify_workers(state):
-        lines.append(f"{role} {status_line}")
-        for d in details[:2]:
-            lines.append(f"• {d}")
-    extend_items(lines, 'Completed', progress.get('completed_items') or [])
-    extend_items(lines, 'In progress', progress.get('in_progress_items') or [])
-    if progress.get('test_summary'):
-        lines.append(f"• Tests: {progress['test_summary']}")
-    if progress.get('commit_refs'):
-        lines.append(f"• Commits: {' → '.join(progress['commit_refs'][:4])}")
-    lines.append('')
+    workers = classify_workers(state)
+    in_progress = compact_in_progress(progress, workers)
+    if in_progress:
+        lines.append(f"• In progress: {'; '.join(in_progress)}")
     lines.append(f"Next: {state.get('current') or 'continue current iteration flow'}")
     lines.extend(footer(state, now))
-    if progress.get('last_failure_reason'):
-        lines.append(f"Note: {progress['last_failure_reason']}")
     return '\n'.join(lines)
 
 
@@ -167,36 +240,33 @@ def render_pause(state, now):
     resume = state.get('resume', {}) or {}
     progress = state.get('progress', {}) or {}
     lines = [header('⏸️', state, now), '']
-    milestone = render_pending_milestone(progress)
+    milestone = render_pending_milestone(progress, {'milestone', 'progress'})
     if milestone:
         lines.append(milestone)
-        lines.append('')
     lines.append(f"Reason: {resume.get('blocked_by') or 'paused'}")
-    if resume.get('note'):
-        lines.append(f"Note: {resume['note']}")
+    current = pick_current_line(state)
+    if current:
+        lines.append(f"Current: {current}")
     resume_at = parse_dt(resume.get('resume_at'))
     if resume_at:
         lines.append(f"Expected resume: {fmt_local(resume_at)}")
-    if progress.get('last_subagent_result'):
-        lines.append(f"Current progress: {progress['last_subagent_result']}")
-    extend_items(lines, 'Completed', progress.get('completed_items') or [])
-    lines.append('')
     lines.extend(footer(state, now))
     return '\n'.join(lines)
 
 
 def render_resume(state, now):
     progress = state.get('progress', {}) or {}
+    resume = state.get('resume', {}) or {}
     lines = [header('▶️', state, now), '']
-    milestone = render_pending_milestone(progress)
+    milestone = render_pending_milestone(progress, {'milestone', 'progress'})
     if milestone:
         lines.append(milestone)
-        lines.append('')
     lines.append('Status: automatic iteration resumed')
-    if progress.get('last_subagent_result'):
-        lines.append(f"Current progress: {progress['last_subagent_result']}")
-    extend_items(lines, 'Completed', progress.get('completed_items') or [])
-    lines.append('')
+    if resume.get('note'):
+        lines.append(f"Reason: {resume['note']}")
+    current = pick_current_line(state)
+    if current:
+        lines.append(f"Current: {current}")
     lines.append(f"Next: {state.get('current') or 'continue current iteration flow'}")
     lines.extend(footer(state, now))
     return '\n'.join(lines)
@@ -204,16 +274,11 @@ def render_resume(state, now):
 
 def render_repair(state, now):
     coord = state.get('coordination', {}) or {}
-    progress = state.get('progress', {}) or {}
     lines = [header('⚠️', state, now), '']
-    milestone = render_pending_milestone(progress)
-    if milestone:
-        lines.append(milestone)
-        lines.append('')
-    lines.append('Status: watchdog repaired the coordinator chain')
-    lines.append(f"Handled: repair count = {coord.get('watchdog_tripped_count', 0)}")
-    lines.append('Impact: iteration state was preserved and will continue from the latest committed STATE')
-    lines.append('')
+    lines.append('Status: coordinator wake chain repaired')
+    repair_count = coord.get('watchdog_tripped_count', 0)
+    if repair_count > 1:
+        lines.append(f"Handled: repair count = {repair_count}")
     lines.append(f"Next: {state.get('current') or 'resume coordinator polling'}")
     lines.extend(footer(state, now))
     return '\n'.join(lines)
