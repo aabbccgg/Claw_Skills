@@ -25,6 +25,8 @@ Start only when all are true:
 - The reporting destination can be persisted as `origin.report_to`.
 - Required tools for the selected mode are available under effective tool policy.
 
+Before starting any automatic iterative workflow, ask the user for clarification if the loop body, parallel loops, nested loops, or the task itself contains ambiguity, unclear logic, missing decisions, or conflicting instructions. Do not start the automated iteration until those ambiguities are resolved.
+
 Modes:
 - **Spawned-worker mode** — default and preferred. Requires `cron`, `message`, `sessions_spawn`, `sessions_history`. Use `sessions_spawn(..., runTimeoutSeconds=1800)` unless a shorter worker budget is explicitly justified.
 - **Existing-agent mode** — optional and best-effort. Requires `sessions_send`, `sessions_history` visibility to the target session, and a dedicated automation-safe target session.
