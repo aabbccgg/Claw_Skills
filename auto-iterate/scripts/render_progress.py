@@ -86,10 +86,11 @@ def classify_workers(state, limit=2):
     if not active_subs:
         return []
 
-    groups = {'Developer': [], 'Tester': [], 'Worker': []}
-    for sub in active_subs:
+    results = []
+    ordered = sorted(active_subs, key=lambda s: (s.get('started_at') or '', s.get('child_session_key') or ''))
+    for sub in ordered:
         summary = str(sub.get('summary') or '').strip()
-        role_source = ' '.join(
+        lower = ' '.join(
             filter(
                 None,
                 [
@@ -99,54 +100,48 @@ def classify_workers(state, limit=2):
                 ],
             )
         ).lower()
-        if any(token in role_source for token in ['test', 'tester', 'verify', 'verification', 'validate']):
-            groups['Tester'].append(sub)
-        elif any(token in role_source for token in ['dev', 'developer', 'fix', 'implement', 'patch']):
-            groups['Developer'].append(sub)
-        else:
-            groups['Worker'].append(sub)
-
-    results = []
-    for role in ['Developer', 'Tester', 'Worker']:
-        items = groups[role]
-        if not items:
-            continue
-        primary = sorted(items, key=lambda s: (s.get('started_at') or '', s.get('child_session_key') or ''))[0]
-        summary = str(primary.get('summary') or '').strip()
-        lower = summary.lower()
-        status = primary.get('status')
-        icon = status_icon(status)
-        status_label = status_text(status)
+        icon = status_icon(sub.get('status'))
         commit_match = re.search(r'\b[0-9a-f]{7,40}\b', summary)
 
-        if role == 'Tester':
-            if commit_match:
-                compact = f"Tester verification for commit {commit_match.group(0)}"
+        if any(token in lower for token in ['verify', 'verification', 'validate', 'tester', 'test', 'pytest', 'build']):
+            if 'queue' in lower or 'queued' in lower or 'dispatch' in lower or 'handoff' in lower:
+                compact = f"Verification queued for commit {commit_match.group(0)}" if commit_match else 'Verification queued'
             else:
-                compact = 'Tester verification in progress'
-        elif role == 'Developer':
-            if any(token in lower for token in ['follow-up', 'remaining defect', 'remaining issue', 'history', 'delete', 'deactivate', 'preservation', 'regression']):
-                compact = 'Developer follow-up fix in progress'
-            elif any(token in lower for token in ['verify', 'verification', 'pytest', 'tests', 'build']):
-                compact = 'Developer verification in progress'
+                compact = f"Verification for commit {commit_match.group(0)}" if commit_match else 'Verification in progress'
+        elif any(token in lower for token in ['follow-up', 'remaining defect', 'remaining issue', 'regression', 'history', 'delete', 'deactivate', 'preservation']):
+            if 'queue' in lower or 'queued' in lower or 'dispatch' in lower or 'handoff' in lower:
+                compact = 'Follow-up fix queued'
             else:
-                compact = 'Developer work in progress'
-        else:
-            if commit_match and any(token in lower for token in ['verify', 'verification', 'validate']):
-                compact = f"Verification in progress for commit {commit_match.group(0)}"
+                compact = 'Follow-up fix in progress'
+        elif any(token in lower for token in ['fix', 'implement', 'patch', 'developer', 'dev']):
+            if 'queue' in lower or 'queued' in lower or 'dispatch' in lower or 'handoff' in lower:
+                compact = 'Fix queued'
             else:
+                compact = 'Fix in progress'
+        elif 'queue' in lower or 'queued' in lower or 'dispatch' in lower or 'handoff' in lower:
+            compact = f"Handoff queued for commit {commit_match.group(0)}" if commit_match else 'Handoff queued'
+        elif summary:
+            compact = re.sub(r'\b(?:developer|tester)\s+topic\s+\d+\b', '', summary, flags=re.I)
+            compact = re.sub(r'\btopic\s+\d+\b', '', compact, flags=re.I)
+            compact = re.sub(r'\bunder\s+[^,.;]+', '', compact, flags=re.I)
+            compact = re.sub(r'\s+', ' ', compact).strip(' .;:')
+            if len(compact) > 80:
+                compact = compact[:77].rstrip() + '...'
+            if not compact:
                 compact = 'Work in progress'
+        else:
+            compact = 'Work in progress'
 
-        results.append(
-            {
-                'role': role,
-                'icon': icon,
-                'status': status_label,
-                'summary': summary,
-                'line': f"{icon} {compact}",
-                'current': compact,
-            }
-        )
+        line = f"{icon} {compact}"
+        if line not in [item['line'] for item in results]:
+            results.append(
+                {
+                    'icon': icon,
+                    'summary': summary,
+                    'line': line,
+                    'current': compact,
+                }
+            )
         if len(results) >= limit:
             break
     return results
