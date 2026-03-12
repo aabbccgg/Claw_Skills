@@ -63,7 +63,7 @@ Do not edit orchestration state. Do not schedule cron.
 
 ## 4. CLI cron fallback examples
 
-Cron path is native first, CLI fallback second. Use these only when the native `cron` tool is unavailable but `exec` can run `openclaw cron ...`. Compute the coordinator next-poll delay first with `python3 scripts/compute_next_poll.py --state-path /abs/path/STATE.md --json`, then fill the successor wake time dynamically.. The flags below match the current OpenClaw CLI shape (`openclaw cron add --help`).
+Cron path is native first, CLI fallback second. Use these only when the native `cron` tool is unavailable but `exec` can run `openclaw cron ...`. Compute the coordinator next-poll delay first with `python3 scripts/compute_next_poll.py --state-path /abs/path/STATE.md --json`, then fill the successor wake time dynamically. The flags below match the current OpenClaw CLI shape (`openclaw cron add --help`).
 
 ```bash
 # Add one-shot coordinator wake
@@ -126,10 +126,13 @@ Routing rule: the coordinator sends these messages directly to `origin.report_to
 ### Progress
 
 ```text
-🔄 Round 3 | Loop: fix-rawdata-error
+🔄 Round 3 | Loop: fix-rawdata-error (2:09 PM)
 
-Milestone: dark mode done; tester handoff queued
-• In progress: rawData.some error fix
+Milestone (milestone): dark mode done; tester handoff queued
+
+Worker 🔄 Accepted
+• In progress: tester verification is running for commit 5d31ffe
+
 Next: wait for tester verification
 ⏰ Next check: 2:09 PM
 ```
@@ -137,7 +140,7 @@ Next: wait for tester verification
 ### Pause
 
 ```text
-⏸️ Round 4 | Loop: refine-code
+⏸️ Round 4 | Loop: refine-code (4:15 PM)
 
 Reason: Claude quota suspension
 Current: backend branch waiting to continue
@@ -150,12 +153,12 @@ Expected resume: 4:15 PM
 Resume reports may include `Reason:` when the committed state provides a meaningful resume note (for example quota recovery context). If no such note exists, omit the line.
 
 ```text
-▶️ Round 4 | Loop: refine-code
+▶️ Round 4 | Loop: refine-code (4:24 PM)
 
 Status: automatic iteration resumed
-Reason: quota restored / coordinator recovered control
-Current: backend branch resumed
-Next: continue Round 4 development and verification
+Reason: quota restored
+Current: resumed after quota reset
+Next: continue branch after quota restore
 ⏰ Next check: 4:24 PM
 ```
 
@@ -164,7 +167,7 @@ Next: continue Round 4 development and verification
 Repair reports may include `Handled:` (Count>1)
 
 ```text
-⚠️ Round 3 | Loop: round3
+⚠️ Round 3 | Loop: round3 (2:28 PM)
 
 Status: coordinator wake chain repaired
 Handled: repair count = 2
@@ -175,13 +178,12 @@ Next: resume coordinator polling
 ### Final completion
 
 ```text
-✅ [auto-iterate] Complete! (3:42 PM)
+✅ Round 4 | Loop: final-report (3:42 PM)
 
-Completed 4 rounds and 6 branches successfully
-• Core fixes: serializer, migration, dark mode
-• Tests: 97 passed ✅, 0 failed
+Completed 4 rounds and 6 loop(s)
+• Final result: all checks passed
+• Completed: serializer, migration, dark mode
 • Commits: ae9dca7 → f3b1c02
-
-Cleanup: coordinator wake, watchdog, and 1 pending wake removed
-Total runtime: 2h40m
+• Tests: 97 passed
+• Cleanup: wake cleanup=done, report=sent
 ```

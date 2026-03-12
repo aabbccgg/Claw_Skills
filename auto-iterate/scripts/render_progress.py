@@ -45,7 +45,7 @@ def human_delta(a, b):
 
 def status_icon(status):
     return {
-        'accepted': '🔄', 'running': '🔄', 'success': '✅', 'no-change': '✅',
+        'accepted': '🔄', 'running': '🏃', 'success': '✅', 'no-change': '✅',
         'blocked': '⏸️', 'failed': '❌', 'timed-out': '❌', 'stalled': '⚠️',
     }.get(status, '🔄')
 
@@ -65,6 +65,16 @@ def pick_loop_label(state):
     return state.get('current') or 'current-loop'
 
 
+def format_pause_reason(blocked_by):
+    return {
+        'claude-quota': 'Claude quota suspension',
+        'user-input': 'User input required',
+        'repair-failed': 'Repair failed',
+        'none': 'paused',
+        None: 'paused',
+    }.get(blocked_by, str(blocked_by or 'paused'))
+
+
 def pick_mode(state, explicit=None):
     if explicit:
         return explicit
@@ -80,79 +90,30 @@ def pick_mode(state, explicit=None):
     return 'progress'
 
 
-def classify_workers(state, limit=2):
+def pick_primary_worker(state):
     subs = state.get('subagents', []) or []
     active_subs = [sub for sub in subs if sub.get('status') in ACTIVE_WORKER_STATUSES]
     if not active_subs:
-        return []
-
-    results = []
+        return None
     ordered = sorted(active_subs, key=lambda s: (s.get('started_at') or '', s.get('child_session_key') or ''))
-    for sub in ordered:
-        summary = str(sub.get('summary') or '').strip()
-        lower = ' '.join(
-            filter(
-                None,
-                [
-                    str(sub.get('loop_id') or ''),
-                    str(sub.get('branch_id') or ''),
-                    summary,
-                ],
-            )
-        ).lower()
-        icon = status_icon(sub.get('status'))
-        commit_match = re.search(r'\b[0-9a-f]{7,40}\b', summary)
-
-        if any(token in lower for token in ['verify', 'verification', 'validate', 'tester', 'test', 'pytest', 'build']):
-            if 'queue' in lower or 'queued' in lower or 'dispatch' in lower or 'handoff' in lower:
-                compact = f"Verification queued for commit {commit_match.group(0)}" if commit_match else 'Verification queued'
-            else:
-                compact = f"Verification for commit {commit_match.group(0)}" if commit_match else 'Verification in progress'
-        elif any(token in lower for token in ['follow-up', 'remaining defect', 'remaining issue', 'regression', 'history', 'delete', 'deactivate', 'preservation']):
-            if 'queue' in lower or 'queued' in lower or 'dispatch' in lower or 'handoff' in lower:
-                compact = 'Follow-up fix queued'
-            else:
-                compact = 'Follow-up fix in progress'
-        elif any(token in lower for token in ['fix', 'implement', 'patch', 'developer', 'dev']):
-            if 'queue' in lower or 'queued' in lower or 'dispatch' in lower or 'handoff' in lower:
-                compact = 'Fix queued'
-            else:
-                compact = 'Fix in progress'
-        elif 'queue' in lower or 'queued' in lower or 'dispatch' in lower or 'handoff' in lower:
-            compact = f"Handoff queued for commit {commit_match.group(0)}" if commit_match else 'Handoff queued'
-        elif summary:
-            compact = re.sub(r'\b(?:developer|tester)\s+topic\s+\d+\b', '', summary, flags=re.I)
-            compact = re.sub(r'\btopic\s+\d+\b', '', compact, flags=re.I)
-            compact = re.sub(r'\bunder\s+[^,.;]+', '', compact, flags=re.I)
-            compact = re.sub(r'\s+', ' ', compact).strip(' .;:')
-            if len(compact) > 80:
-                compact = compact[:77].rstrip() + '...'
-            if not compact:
-                compact = 'Work in progress'
-        else:
-            compact = 'Work in progress'
-
-        line = f"{icon} {compact}"
-        if line not in [item['line'] for item in results]:
-            results.append(
-                {
-                    'icon': icon,
-                    'summary': summary,
-                    'line': line,
-                    'current': compact,
-                }
-            )
-        if len(results) >= limit:
-            break
-    return results
+    primary = ordered[0]
+    summary = str(primary.get('summary') or '').strip()
+    if not summary:
+        summary = None
+    return {
+        'status': primary.get('status') or 'running',
+        'icon': status_icon(primary.get('status')),
+        'status_text': status_text(primary.get('status')),
+        'summary': summary,
+    }
 
 
 def header(icon, state, now):
-    del now
-    return f"{icon} Round {state.get('round', '?')} | Loop: {pick_loop_label(state)}"
+    return f"{icon} Round {state.get('round', '?')} | Loop: {pick_loop_label(state)} ({fmt_local(now)})"
 
 
 def footer(state, now):
+    del now
     coord = state.get('coordination', {}) or {}
     next_check = parse_dt(coord.get('next_expected_wake_at'))
     out = []
@@ -186,16 +147,16 @@ def render_pending_milestone(progress, allowed_types=None):
     item = pick_pending_report(progress, allowed_types)
     if not item:
         return None
-    return f"Milestone: {item['summary']}"
+    return f"Milestone ({item['type']}): {item['summary']}"
 
 
 def pick_current_line(state):
     progress = state.get('progress', {}) or {}
     if progress.get('last_subagent_result'):
         return str(progress['last_subagent_result']).strip().rstrip('.')
-    workers = classify_workers(state, limit=1)
-    if workers:
-        return workers[0]['current']
+    worker = pick_primary_worker(state)
+    if worker and worker.get('summary'):
+        return worker['summary'].rstrip('.')
     in_progress = progress.get('in_progress_items') or []
     if in_progress:
         return str(in_progress[0]).strip().rstrip('.')
@@ -204,16 +165,15 @@ def pick_current_line(state):
     return None
 
 
-def compact_in_progress(progress, workers, limit=2):
-    if workers:
-        values = [item['line'] for item in workers[:limit]]
-    else:
-        values = [str(item).strip().rstrip('.') for item in (progress.get('in_progress_items') or [])[:limit]]
-    deduped = []
-    for value in values:
-        if value and value not in deduped:
-            deduped.append(value)
-    return deduped
+def pick_in_progress_line(state):
+    progress = state.get('progress', {}) or {}
+    worker = pick_primary_worker(state)
+    if worker and worker.get('summary'):
+        return worker['summary'].rstrip('.')
+    in_progress = progress.get('in_progress_items') or []
+    if in_progress:
+        return str(in_progress[0]).strip().rstrip('.')
+    return None
 
 
 def render_progress(state, now):
@@ -222,10 +182,14 @@ def render_progress(state, now):
     milestone = render_pending_milestone(progress, {'milestone', 'progress'})
     if milestone:
         lines.append(milestone)
-    workers = classify_workers(state)
-    in_progress = compact_in_progress(progress, workers)
+        lines.append('')
+    worker = pick_primary_worker(state)
+    if worker:
+        lines.append(f"Worker {worker['icon']} {worker['status_text']}")
+    in_progress = pick_in_progress_line(state)
     if in_progress:
-        lines.append(f"• In progress: {'; '.join(in_progress)}")
+        lines.append(f"• In progress: {in_progress}")
+    lines.append('')
     lines.append(f"Next: {state.get('current') or 'continue current iteration flow'}")
     lines.extend(footer(state, now))
     return '\n'.join(lines)
@@ -238,7 +202,8 @@ def render_pause(state, now):
     milestone = render_pending_milestone(progress, {'milestone', 'progress'})
     if milestone:
         lines.append(milestone)
-    lines.append(f"Reason: {resume.get('blocked_by') or 'paused'}")
+        lines.append('')
+    lines.append(f"Reason: {format_pause_reason(resume.get('blocked_by'))}")
     current = pick_current_line(state)
     if current:
         lines.append(f"Current: {current}")
@@ -256,6 +221,7 @@ def render_resume(state, now):
     milestone = render_pending_milestone(progress, {'milestone', 'progress'})
     if milestone:
         lines.append(milestone)
+        lines.append('')
     lines.append('Status: automatic iteration resumed')
     if resume.get('note'):
         lines.append(f"Reason: {resume['note']}")
