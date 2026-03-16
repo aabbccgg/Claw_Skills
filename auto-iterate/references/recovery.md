@@ -81,19 +81,19 @@ Watchdog checks:
 - repeated cleanup failures in `cleanup_pending[]`
 
 Watchdog repair rules:
-1. Recreate the coordinator wake when missing or overdue.
-2. Persist repair data.
-3. Increment `watchdog_tripped_count`.
-4. Avoid duplicate user reports if repair succeeds silently.
-5. Set `coordination.alert_needed: true` in state when repair is triggered. Do not send user messages directly.
-6. Exception: if `watchdog_tripped_count >= 3` and the coordinator has still not recovered, send one alert using the `⚠️` watchdog-repair template from `references/examples.md`, then set `coordination.alert_sent: true` to prevent duplicates.
-7. Otherwise, leave `coordination.alert_needed: true` for the next recovered coordinator cycle to report.
+1. If the watchdog finds the workflow healthy and no repair is needed, reply with `NO_REPLY` and do not emit a user-facing status message.
+2. Recreate the coordinator wake when missing or overdue.
+3. Persist repair data.
+4. Increment `watchdog_tripped_count`.
+5. After a successful watchdog repair, send one direct repair alert immediately using the `⚠️` watchdog-repair template from `references/examples.md`, then set `coordination.alert_sent: true` to prevent duplicates.
+6. If repeated repair failures persist, send one direct alert immediately using the same `⚠️` watchdog-repair template and keep retrying repair.
+7. Do not leave successful repair reporting to the recovered coordinator; the watchdog owns the repair alert.
 
 Repair verification checklist:
 - `coordination.current_wake_job_id` points to the replacement wake
 - `coordination.next_expected_wake_at` is refreshed
 - superseded wake ids, if any, are retained in `cleanup_pending[]`
-- `coordination.alert_needed` remains true until a recovered coordinator reports the repair
+- `coordination.alert_sent` prevents duplicate watchdog direct alerts after a repair or repeated failure report
 
 If any verification item is missing, the repair is incomplete. Keep watchdog alive, preserve repair state, and retry instead of assuming the chain is healthy.
 

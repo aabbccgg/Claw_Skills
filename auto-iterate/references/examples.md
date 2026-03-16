@@ -70,6 +70,7 @@ When the user provides an agent identifier, agent name, or profile-like agent re
 User instruction: use agent "developer" for the developer role
 Step 1: call agents_list and save the JSON result
 Step 2: run `python3 scripts/resolve_agent_profile.py --requested developer --agents-json /tmp/agents.json --json`
+(Resolver prefers exact id/name matches, then unique normalized or prefix matches, and reports ambiguity instead of guessing.)
 Expected resolver result:
 - matchedProfile: developer
 - spawnable: true
@@ -196,6 +197,14 @@ Status: coordinator wake chain repaired
 Handled: repair count = 2
 Next: resume coordinator polling
 ⏰ Next check: 2:28 PM
+```
+
+### Watchdog healthy
+
+Healthy watchdog wakes must stay silent. Emit `NO_REPLY` and do not send a user-visible status update.
+
+```text
+NO_REPLY
 ```
 
 ### Final completion

@@ -26,15 +26,43 @@ def extract_profiles(openclaw_payload: dict) -> list[dict]:
 
 def match_profiles(requested: str, profiles: list[dict]) -> list[dict]:
     rq = normalize(requested)
-    matches = []
+    compact = re.sub(r'[^a-z0-9]+', '', rq)
+
+    exact = []
+    prefix = []
+    token = []
     for item in profiles:
-        candidates = {
-            normalize(item.get('id')),
-            normalize(item.get('name')),
-        }
-        if rq in candidates:
-            matches.append(item)
-    return matches
+        pid = normalize(item.get('id'))
+        pname = normalize(item.get('name'))
+        candidates = {pid, pname}
+        compact_candidates = {re.sub(r'[^a-z0-9]+', '', c) for c in candidates if c}
+
+        if rq in candidates or (compact and compact in compact_candidates):
+            exact.append(item)
+            continue
+
+        if any(c.startswith(rq) for c in candidates if rq) or any(cc.startswith(compact) for cc in compact_candidates if compact):
+            prefix.append(item)
+            continue
+
+        rq_tokens = [t for t in re.split(r'[^a-z0-9]+', rq) if t]
+        cand_tokens = set()
+        for c in candidates:
+            cand_tokens.update([t for t in re.split(r'[^a-z0-9]+', c) if t])
+        if rq_tokens and all(t in cand_tokens for t in rq_tokens):
+            token.append(item)
+
+    if exact:
+        return exact
+    if len(prefix) == 1:
+        return prefix
+    if len(prefix) > 1:
+        return prefix
+    if len(token) == 1:
+        return token
+    if len(token) > 1:
+        return token
+    return []
 
 
 def main():

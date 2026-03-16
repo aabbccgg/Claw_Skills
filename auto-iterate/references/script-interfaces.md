@@ -65,6 +65,11 @@ Use this file instead of reading full script source when you only need the invoc
 ## resolve_agent_profile.py
 - Purpose: resolve a requested agent/profile against the runtime-available agent list and `openclaw.json`
 - Args: `--requested <agent-name-or-id> --agents-json <path> [--openclaw-json <path>] [--json]`
+- Matching behavior:
+  - prefer exact id/name match
+  - then allow a unique normalized/prefix match
+  - then allow a unique token-based match
+  - if multiple candidates remain, report ambiguity instead of guessing
 - Output:
   - exit `0` when the matched profile is currently spawnable, nonzero otherwise
   - JSON mode: `{ok, requestedProfile, matchedProfile, spawnable, spawnAgentId, expectedPrimaryModel, fallbackNeeded, reason, allowedAgents, matchedProfiles}`
