@@ -6,6 +6,7 @@ import json
 import subprocess
 from pathlib import Path
 import yaml
+import os
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = [
@@ -51,10 +52,10 @@ MODE_OVERRIDES = {
 
 
 DOC_CONTRACTS = [
-    (ROOT / 'SKILL.md', ['Cron path:', 'native cron first', 'CLI fallback second', 'agent-profile selection', 'Spawn an isolated worker that reuses the matched agent profile']),
+    (ROOT / 'SKILL.md', ['Cron path:', 'native cron first', 'CLI fallback second', 'resolve_agent_profile.py', 'expected primary model', 'effective model']),
     (ROOT / 'references' / 'script-interfaces.md', ['Cron path:', 'native cron first', 'openclaw cron', 'CLI fallback second']),
     (ROOT / 'references' / 'recovery.md', ['Cron path is native first', 'CLI fallback second', 'openclaw cron']),
-    (ROOT / 'references' / 'examples.md', ['Cron path is native first', 'CLI fallback second', '--session isolated', '--no-deliver', '--agent <own_agent_id>', 'openclaw cron remove <job-id>', 'Agent-profile reuse example', 'Do not reuse a live session']),
+    (ROOT / 'references' / 'examples.md', ['Cron path is native first', 'CLI fallback second', '--session isolated', '--no-deliver', '--agent <own_agent_id>', 'openclaw cron remove <job-id>', 'Agent-profile reuse example', 'Do not reuse a live session', 'resolve_agent_profile.py', 'expected_primary_model', 'effective_model']),
     (ROOT / 'references' / 'state-schema.md', ['cron_path: native-first-cli-fallback']),
 ]
 
@@ -70,6 +71,7 @@ EXPECTED_FAILURES = {
     ('repair-only-recovery.yaml', 'validate_protocol.py'),
     ('invalid-cron-path.yaml', 'validate_state.py'),
     ('invalid-cron-path.yaml', 'validate_protocol.py'),
+    ('profile-reuse-dispatch-accepted.yaml', 'resolve_agent_profile.py'),
 }
 
 
@@ -124,11 +126,16 @@ def main():
         if fixture.name == 'profile-reuse-dispatch-accepted.yaml':
             subagents = state.get('subagents') or []
             first = subagents[0] if subagents else {}
+            expected_model = str(first.get('expected_primary_model') or '')
+            effective_model = str(first.get('effective_model') or '')
             ok = (
                 state.get('execution_mode') == 'spawned-worker'
                 and bool(first.get('run_id'))
                 and 'subagent' in str(first.get('child_session_key') or '')
-                and 'named agent profile' in str((state.get('progress') or {}).get('last_subagent_result') or '').lower()
+                and str(first.get('requested_agent_profile') or '') == 'developer'
+                and expected_model == 'anthropic/claude-opus-4-6'
+                and (effective_model == expected_model or bool(first.get('model_fallback_reason')))
+                and 'named agent profile developer' in str((state.get('progress') or {}).get('last_subagent_result') or '').lower()
             )
             results.append({
                 'fixture': fixture.name,
@@ -137,7 +144,7 @@ def main():
                 'ok': ok,
                 'expected_ok': True,
                 'stdout': str(first.get('child_session_key') or ''),
-                'stderr': '' if ok else 'profile-reuse fixture must stay spawned-worker with fresh subagent run_id and profile-resolution evidence',
+                'stderr': '' if ok else 'profile-reuse fixture must preserve requested_agent_profile, expected_primary_model, and either matching effective_model or explicit model_fallback_reason',
             })
         commands = [
             ['python3', str(ROOT / 'scripts' / 'validate_state.py'), str(fixture)],
@@ -147,6 +154,14 @@ def main():
             ['python3', str(ROOT / 'scripts' / 'check_stall.py'), str(fixture), '--json'],
             ['python3', str(ROOT / 'scripts' / 'render_progress.py'), str(fixture), '--mode', render_mode_for_state(state, fixture.name)],
         ]
+        if fixture.name == 'profile-reuse-dispatch-accepted.yaml':
+            commands.append([
+                'python3', str(ROOT / 'scripts' / 'resolve_agent_profile.py'),
+                '--requested', 'developer',
+                '--agents-json', str(ROOT / 'scripts' / 'fixtures' / 'agents-main-only.json'),
+                '--openclaw-json', os.path.expanduser('~/.openclaw/openclaw.json'),
+                '--json',
+            ])
         for cmd in commands:
             code, out, err = run(cmd)
             script_name = Path(cmd[1]).name

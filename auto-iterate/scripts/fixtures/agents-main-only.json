@@ -1,0 +1,10 @@
+{
+  "requester": "main",
+  "allowAny": false,
+  "agents": [
+    {
+      "id": "main",
+      "configured": true
+    }
+  ]
+}

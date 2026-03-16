@@ -67,11 +67,21 @@ Do not edit orchestration state. Do not schedule cron.
 When the user provides an agent identifier, agent name, or profile-like agent reference for a worker role, resolve that profile first and still spawn a fresh isolated worker. Do not reuse a live session.
 
 ```text
-User instruction: use agent "frontend-dev" for the developer role
-Resolution: match agent profile "frontend-dev" via runtime-available agent list
-Dispatch action: sessions_spawn(runtime=subagent, agentId="frontend-dev", mode=run, ...)
+User instruction: use agent "developer" for the developer role
+Step 1: call agents_list and save the JSON result
+Step 2: run `python3 scripts/resolve_agent_profile.py --requested developer --agents-json /tmp/agents.json --json`
+Expected resolver result:
+- matchedProfile: developer
+- spawnable: true
+- spawnAgentId: developer
+- expectedPrimaryModel: anthropic/claude-opus-4-6
+Dispatch action: sessions_spawn(runtime=subagent, agentId="developer", mode=run, ...)
 Execution mode: spawned-worker
-Rule: reuse the matched static agent profile only; do not inherit live session history
+Persist after dispatch:
+- requested_agent_profile: developer
+- expected_primary_model: anthropic/claude-opus-4-6
+- effective_model: anthropic/claude-opus-4-6
+Rule: reuse the matched static agent profile only; do not inherit live session history. If the worker actually runs on a different model, persist `model_fallback_reason` instead of silently ignoring the mismatch.
 ```
 
 ## 4. CLI cron fallback examples

@@ -62,6 +62,13 @@ Use this file instead of reading full script source when you only need the invoc
 - Output:
   - plain text only, ready for `message(action="send")`
 
+## resolve_agent_profile.py
+- Purpose: resolve a requested agent/profile against the runtime-available agent list and `openclaw.json`
+- Args: `--requested <agent-name-or-id> --agents-json <path> [--openclaw-json <path>] [--json]`
+- Output:
+  - exit `0` when the matched profile is currently spawnable, nonzero otherwise
+  - JSON mode: `{ok, requestedProfile, matchedProfile, spawnable, spawnAgentId, expectedPrimaryModel, fallbackNeeded, reason, allowedAgents, matchedProfiles}`
+
 ## Cron capability contract
 - Cron path: native cron first, `exec` + `openclaw cron ...` CLI fallback second.
 - Preferred path: native OpenClaw `cron` tool.

@@ -75,6 +75,10 @@ subagents:
     summary: <short text or null>
     criteria_assessment: met|not-met|unclear|null
     next_action_hint: spawn|advance|pause|complete|retry|null
+    requested_agent_profile: <agent id/name or null>
+    expected_primary_model: <provider/model or null>
+    effective_model: <provider/model or null>
+    model_fallback_reason: <text or null>
 
 progress:
   active_loop_ids: []
@@ -113,6 +117,7 @@ cleanup:
 - `progress.active_loop_ids` is the canonical active-loop path used for resume.
 - `progress.last_failure_reason` stores the latest orchestration or worker-mode failure reason.
 - Worker dispatch success must move the workflow to `awaiting-result` with a `subagents[]` record in `accepted` or `running` state; lack of same-wake final result is not itself a failure.
+- If a worker was spawned from a matched named agent profile, persist `requested_agent_profile`, `expected_primary_model`, and then either `effective_model` when observed or `model_fallback_reason` explaining why the effective model differs.
 - `progress.completed_items`, `progress.in_progress_items`, `progress.commit_refs`, and `progress.test_summary` are optional presentation fields consumed by `scripts/render_progress.py`.
 - `progress.pending_reports` is an optional queue of owed user-visible reports (especially milestone updates). Each item should use `{type, key, summary}` so the coordinator can render it and then clear it after successful delivery.
 - `cleanup.*` makes terminal reporting and wake removal idempotent.

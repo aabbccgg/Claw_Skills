@@ -59,10 +59,14 @@ subagents:
   summary: profile-reused worker handoff queued
   criteria_assessment: unclear
   next_action_hint: advance
+  requested_agent_profile: developer
+  expected_primary_model: anthropic/claude-opus-4-6
+  effective_model: anthropic/claude-opus-4-6
+  model_fallback_reason: null
 progress:
   active_loop_ids:
   - part1
-  last_subagent_result: resolved named agent profile frontend-dev and spawned a fresh worker
+  last_subagent_result: resolved named agent profile developer and spawned a fresh worker on anthropic/claude-opus-4-6
   last_failure_reason: null
   completed_items: []
   in_progress_items:

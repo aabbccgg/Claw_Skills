@@ -129,10 +129,10 @@ Worker path:
 If the user provides an agent identifier, agent name, or profile-like agent reference for a worker role, resolve that request as an agent-profile selection. Spawn an isolated worker that reuses the matched agent profile (`agentId`, default model, and static persona).
 
 Agent-profile reuse rules:
-- Inspect the runtime-available agent list (for example via `agents_list`) or the user's explicitly named agent identifiers and resolve the requested worker profile dynamically.
+- Resolve a user-provided agent identifier, agent name, or profile reference with `scripts/resolve_agent_profile.py` after collecting the runtime-available agent list (for example via `agents_list`).
 - Reuse only the static agent profile for the fresh spawned worker. Do not inherit live session history, pending tasks, or transient context.
-- If the requested profile match is ambiguous, unclear, missing, or conflicts with the task structure, ask the user for clarification before starting the automated iteration. Do not silently guess.
-- A user-provided agent identifier, agent name, or profile reference for a worker role overrides the default generic spawned-worker choice, but it still resolves to a fresh spawned worker with the matched profile.
+- If the resolver reports ambiguity, a missing profile, or a non-spawnable profile, ask the user for clarification before starting the automated iteration. Do not silently guess.
+- A user-provided agent identifier, agent name, or profile reference for a worker role overrides the default generic spawned-worker choice and must resolve to a fresh spawned worker with the matched profile. Persist the requested profile id/name, the matched profile's expected primary model, and the worker's effective model once observed. If the effective model differs from the expected primary model, persist an explicit fallback reason instead of silently accepting the drift.
 
 Worker dispatch contract:
 - Dispatch in one wake.

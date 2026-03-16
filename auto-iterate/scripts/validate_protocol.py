@@ -96,6 +96,22 @@ def main():
     if completed_or_terminal_workers and coord.get('pending_transition') == 'spawn':
         warnings.append('workflow still marked for spawn even though a worker result already exists')
 
+    # Agent-profile reuse invariants.
+    for i, sub in enumerate(subs):
+        requested = sub.get('requested_agent_profile')
+        expected_model = sub.get('expected_primary_model')
+        effective_model = sub.get('effective_model')
+        fallback_reason = sub.get('model_fallback_reason')
+        if requested:
+            if not expected_model:
+                errors.append(f'subagents[{i}] requested_agent_profile requires expected_primary_model')
+            if not effective_model and not fallback_reason:
+                errors.append(f'subagents[{i}] profile reuse requires effective_model or model_fallback_reason')
+            if expected_model and effective_model and expected_model != effective_model and not fallback_reason:
+                errors.append(f'subagents[{i}] effective_model drift requires model_fallback_reason')
+            if expected_model and effective_model and expected_model == effective_model and fallback_reason:
+                warnings.append(f'subagents[{i}] model_fallback_reason present even though effective_model matches expected_primary_model')
+
     # Repair verification completeness.
     if coord.get('alert_needed'):
         if not coord.get('current_wake_job_id'):
