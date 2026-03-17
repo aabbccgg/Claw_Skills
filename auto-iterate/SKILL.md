@@ -136,6 +136,7 @@ Agent-profile reuse rules:
 
 Worker dispatch contract:
 - Dispatch in one wake.
+- If the current wake already has everything needed to dispatch the first worker safely, dispatch the first worker immediately in the current wake. Do not defer the initial worker dispatch to a future coordinator wake without a concrete blocking reason.
 - Validate `running --worker-dispatched--> awaiting-result`.
 - Immediately persist worker-dispatched state: `status=awaiting-result`, `subagents[].status=accepted`, `started_at`, and worker session metadata.
 - Schedule the successor wake and END.

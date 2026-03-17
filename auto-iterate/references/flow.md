@@ -38,6 +38,7 @@ Do not use ambiguous aliases such as `spawn`, `dispatch`, `worker-spawned`, or `
 Coordinator rules:
 - After any successful worker result ingestion, the same wake must choose exactly one next transition before END.
 - Worker dispatch and worker result ingestion are separate phases. Do not dispatch and synchronously wait for the final worker result in the same wake.
+- If the current wake already has everything needed to dispatch the first worker safely, dispatch it now; do not defer that first dispatch to a later coordinator wake unless a concrete blocker is recorded.
 
 ## Loop progression semantics
 
