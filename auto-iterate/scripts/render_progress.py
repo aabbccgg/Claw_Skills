@@ -262,7 +262,7 @@ def render_final(state, now):
         lines.append(f"• Commits: {' → '.join(progress['commit_refs'][:4])}")
     if progress.get('test_summary'):
         lines.append(f"• Tests: {progress['test_summary']}")
-    lines.append(f"• Cleanup: wake cleanup={'done' if cleanup.get('wake_cleanup_complete') else 'pending'}, report={'sent' if cleanup.get('terminal_report_sent') else 'pending'}")
+    lines.append(f"• Cleanup: {'complete' if cleanup.get('wake_cleanup_complete') else 'in progress'}")
     return '\n'.join(lines)
 
 

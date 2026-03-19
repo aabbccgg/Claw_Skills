@@ -217,5 +217,5 @@ Completed 4 rounds and 6 loop(s)
 • Completed: serializer, migration, dark mode
 • Commits: ae9dca7 → f3b1c02
 • Tests: 97 passed
-• Cleanup: wake cleanup=done, report=sent
+• Cleanup: complete
 ```

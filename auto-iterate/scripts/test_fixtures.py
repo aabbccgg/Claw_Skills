@@ -55,7 +55,7 @@ DOC_CONTRACTS = [
     (ROOT / 'SKILL.md', ['Cron path:', 'native cron first', 'CLI fallback second', 'resolve_agent_profile.py', 'expected primary model', 'effective model', 'dispatch the first worker immediately']),
     (ROOT / 'references' / 'script-interfaces.md', ['Cron path:', 'native cron first', 'openclaw cron', 'CLI fallback second', 'prefer exact id/name match', 'report ambiguity instead of guessing']),
     (ROOT / 'references' / 'recovery.md', ['Cron path is native first', 'CLI fallback second', 'openclaw cron', 'reply with `NO_REPLY`', 'send one direct repair alert immediately']),
-    (ROOT / 'references' / 'examples.md', ['Cron path is native first', 'CLI fallback second', '--session isolated', '--no-deliver', '--agent <own_agent_id>', 'openclaw cron remove <job-id>', 'Agent-profile reuse example', 'Do not reuse a live session', 'resolve_agent_profile.py', 'expected_primary_model', 'effective_model', 'Watchdog healthy', 'NO_REPLY']),
+    (ROOT / 'references' / 'examples.md', ['Cron path is native first', 'CLI fallback second', '--session isolated', '--no-deliver', '--agent <own_agent_id>', 'openclaw cron remove <job-id>', 'Agent-profile reuse example', 'Do not reuse a live session', 'resolve_agent_profile.py', 'expected_primary_model', 'effective_model', 'Watchdog healthy', 'NO_REPLY', '• Cleanup: complete']),
     (ROOT / 'references' / 'state-schema.md', ['cron_path: native-first-cli-fallback']),
     (ROOT / 'references' / 'flow.md', ['dispatch the first worker safely', 'do not defer that first dispatch to a later coordinator wake']),
 ]
